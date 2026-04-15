@@ -7,11 +7,11 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		DFBEEFA42F84DBAF003E03AA /* EventFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DFBEEFA42F84DBAF003E03AA /* EventFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = EventFlow.app; path = "/Users/thiya/Documents/ios-EventFlow/build/Debug-iphoneos/EventFlow.app"; sourceTree = "<absolute>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		DFBEEFA62F84DBAF003E03AA /* EventFlow */ = {
+		DF8FDF852F8FF2760079D561 /* EventFlow */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = EventFlow;
 			sourceTree = "<group>";
@@ -32,17 +32,8 @@
 		DFBEEF9B2F84DBAF003E03AA = {
 			isa = PBXGroup;
 			children = (
-				DFBEEFA62F84DBAF003E03AA /* EventFlow */,
-				DFBEEFA52F84DBAF003E03AA /* Products */,
+				DF8FDF852F8FF2760079D561 /* EventFlow */,
 			);
-			sourceTree = "<group>";
-		};
-		DFBEEFA52F84DBAF003E03AA /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				DFBEEFA42F84DBAF003E03AA /* EventFlow.app */,
-			);
-			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -61,7 +52,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				DFBEEFA62F84DBAF003E03AA /* EventFlow */,
+				DF8FDF852F8FF2760079D561 /* EventFlow */,
 			);
 			name = EventFlow;
 			packageProductDependencies = (
@@ -95,7 +86,7 @@
 			mainGroup = DFBEEF9B2F84DBAF003E03AA;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = DFBEEFA52F84DBAF003E03AA /* Products */;
+			productRefGroup = DFBEEF9B2F84DBAF003E03AA;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
