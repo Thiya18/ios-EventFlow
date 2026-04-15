@@ -19,14 +19,14 @@ struct SignInView: View {
             Colors.bgPrimary.ignoresSafeArea()
             if mode == .signIn {
                 LoginForm(onSwitchToSignUp: { mode = .signUp })
-            } else {
-                SignUpForm(onSwitchToSignIn: { mode = .signIn })
-            }
+            } 
         }
     }
 }
 
-
+#Preview {
+    SignInView()
+}
 struct LoginForm: View {
     let onSwitchToSignUp: () -> Void
 
@@ -143,5 +143,10 @@ struct LoginForm: View {
             }
         }
     }
+}
+
+#Preview {
+    LoginForm(onSwitchToSignUp: {})
+        .background(Colors.bgPrimary)
 }
 
