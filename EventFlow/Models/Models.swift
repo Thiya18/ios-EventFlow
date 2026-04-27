@@ -1,14 +1,9 @@
-//
-//  Models.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-19.
-//
-
+// Models.swift
+// EventFlow shared data models
 
 import SwiftUI
 
-//  Event
+// MARK: - Event
 struct EventModel: Identifiable {
     let id: Int
     let tag: String
@@ -18,6 +13,7 @@ struct EventModel: Identifiable {
     let members: Int
     let accent: Color
     let date: EventDate
+   
 }
 
 struct EventDate {
@@ -26,15 +22,15 @@ struct EventDate {
     let year: Int
 }
 
-//  Task
+// MARK: - Task
 struct TaskModel: Identifiable {
     let id:      Int
-    let rawId:   String
+    let rawId:   String          // Firestore document ID (used for local reminder IDs)
     let text:    String
     var done:    Bool
     let priority: TaskPriority
     let event:   String
-    let dueDate: Date?
+    let dueDate: Date?           // Optional due date — drives local reminders
 }
 
 enum TaskPriority: String {
@@ -49,7 +45,7 @@ enum TaskPriority: String {
     }
 }
 
-//  Alert
+// MARK: - Alert
 struct AlertModel: Identifiable {
     let id: Int
     let tag: String
@@ -59,18 +55,18 @@ struct AlertModel: Identifiable {
     var read: Bool
     let iconColor: Color
     let iconBg: Color
-    let systemIcon: String
+    let systemIcon: String          // SF Symbol name
     let actions: [String]?
 }
 
-// Member
+// MARK: - Member
 struct MemberModel: Identifiable {
     let id: Int
     let name: String
     let avatarURL: String
 }
 
-// Sample Data
+// MARK: - Sample Data
 extension EventModel {
     static let samples: [EventModel] = [
         EventModel(id: 1, tag: "MEETING",  title: "Final QA Review",     time: "02:00 PM — 03:00 PM", location: "Google Meet",       members: 5,  accent: Colors.accentTeal, date: EventDate(day: 12, month: 4, year: 2026)),
