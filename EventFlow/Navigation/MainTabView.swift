@@ -1,10 +1,5 @@
-//
-//  MainTabView.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-16.
-//
-
+// MainTabView.swift
+// Bottom tab bar — mirrors Tab.Navigator in App.tsx
 
 import SwiftUI
 
@@ -20,16 +15,16 @@ struct MainTabView: View {
         ZStack(alignment: .bottom) {
             Group {
                 switch selectedTab {
-                case .home:
-                case .calendar:
-                case .create:
-                case .map:
-                case .profile:
+                case .home:     HomeView()
+                case .calendar: CalendarView()
+                case .create:   CreateEventView(onDismiss: { selectedTab = .home })
+                case .map:      MapView()
+                case .profile:  ProfileView(onSignOut: onSignOut)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            
+            // Custom Tab Bar
             CustomTabBar(selected: $selectedTab)
         }
         .background(Colors.bgPrimary.ignoresSafeArea())
@@ -37,7 +32,7 @@ struct MainTabView: View {
     }
 }
 
-
+// MARK: - Custom Tab Bar
 struct CustomTabBar: View {
     @Binding var selected: MainTabView.Tab
 
@@ -46,7 +41,7 @@ struct CustomTabBar: View {
             TabBarItem(icon: "house.fill",       tab: .home,     selected: $selected)
             TabBarItem(icon: "calendar",          tab: .calendar, selected: $selected)
 
-           
+            // Centre "plus" button
             Button {
                 selected = .create
             } label: {
@@ -94,7 +89,7 @@ struct TabBarItem: View {
     }
 }
 
-
+// MARK: - Rounded corner helper
 struct RoundedCornersShape: Shape {
     var corners: UIRectCorner
     var radius: CGFloat
