@@ -1,11 +1,4 @@
-//
-//  NetworkLayer.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-30.
-//
-
-=
+// NetworkLayer.swift
 
 import SwiftUI
 internal import Combine
