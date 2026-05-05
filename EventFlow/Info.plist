@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+	<!-- ═══════════════════════════════════════════
+	     APP IDENTITY
+	     ═══════════════════════════════════════════ -->
+	<key>CFBundleName</key>
+	<string>EventFlow</string>
+
+	<key>CFBundleDisplayName</key>
+	<string>EventFlow</string>
+
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+
+	<!-- ═══════════════════════════════════════════
+	     SUPPORTED DEVICES & ORIENTATIONS
+	     ═══════════════════════════════════════════ -->
+	<key>UIDeviceFamily</key>
+	<array>
+		<integer>1</integer><!-- iPhone -->
+		<integer>2</integer><!-- iPad -->
+	</array>
+
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- ═══════════════════════════════════════════
+	     LAUNCH & SCENE
+	     ═══════════════════════════════════════════ -->
+	<key>UILaunchScreen</key>
+	<dict/>
+
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+
+	<!-- ═══════════════════════════════════════════
+	     FACE ID / TOUCH ID
+	     Required by LocalAuthentication framework.
+	     ═══════════════════════════════════════════ -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>EventFlow uses Face ID to securely protect your account and unlock the app.</string>
+
+	<!-- ═══════════════════════════════════════════
+	     LOCATION
+	     ═══════════════════════════════════════════ -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>EventFlow uses your location to show nearby events on the map.</string>
+
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>EventFlow uses your location in the background to send arrival alerts when you reach an event venue.</string>
+
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>EventFlow uses your location in the background to send arrival alerts when you reach an event venue.</string>
+
+	<!-- ═══════════════════════════════════════════
+	     PUSH NOTIFICATIONS (Remote / APNs)
+	     ═══════════════════════════════════════════ -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>location</string>
+		<string>fetch</string>
+	</array>
+
+	<!-- ═══════════════════════════════════════════
+	     CAMERA  (for profile photo upload)
+	     ═══════════════════════════════════════════ -->
+	<key>NSCameraUsageDescription</key>
+	<string>EventFlow uses the camera so you can update your profile photo.</string>
+
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>EventFlow accesses your photo library so you can choose a profile picture.</string>
+
+	<!-- ═══════════════════════════════════════════
+	     NETWORK (allow local / HTTP backend in dev)
+	     ═══════════════════════════════════════════ -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Remove this dict (or set NSAllowsArbitraryLoads to false) in production -->
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+
+</dict>
+</plist>

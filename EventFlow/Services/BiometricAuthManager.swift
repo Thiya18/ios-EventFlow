@@ -1,11 +1,6 @@
-//
-//  BiometricAuthManager.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-30.
-//
-
-
+// BiometricAuthManager.swift
+// EventFlow — Face ID / Touch ID Authentication
+// Drop into: EventFlow/Services/BiometricAuthManager.swift
 
 import LocalAuthentication
 import SwiftUI
