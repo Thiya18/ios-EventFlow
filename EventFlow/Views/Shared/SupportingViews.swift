@@ -3,11 +3,19 @@
 
 import SwiftUI
 
-// MARK: ─── AddTaskView ────────────────────────────────────────────────────────
 struct AddTaskView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var taskTitle = ""
-    @State private var description = ""
+    @EnvironmentObject private var store: AppStore
+    @State private var taskTitle  = ""
+    @State private var priority   = "med"
+    @State private var hasDueDate = false
+    @State private var dueDate    = Date()
+    @State private var isSaving   = false
+    @State private var saved      = false
+
+    private let priorities = [("high", "High", Colors.red),
+                               ("med",  "Med",  Colors.accentGold),
+                               ("low",  "Low",  Colors.success)]
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -21,29 +29,69 @@ struct AddTaskView: View {
                     .padding(16)
                     .background(Colors.bgSecondary)
                     .cornerRadius(16)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 24)
 
-                SectionLabel("DESCRIPTION")
-                TextEditor(text: $description)
-                    .foregroundColor(.white)
-                    .frame(minHeight: 120)
-                    .padding(16)
-                    .background(Colors.bgSecondary)
+                SectionLabel("PRIORITY")
+                HStack(spacing: 10) {
+                    ForEach(priorities, id: \.0) { val, label, color in
+                        Button { priority = val } label: {
+                            Text(label)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(priority == val ? .black : Colors.textSecondary)
+                                .frame(maxWidth: .infinity).padding(.vertical, 10)
+                                .background(priority == val ? color : Color.clear)
+                                .cornerRadius(10)
+                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(color.opacity(0.4), lineWidth: 1))
+                        }
+                    }
+                }
+                .padding(.bottom, 24)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        SectionLabel("DUE DATE")
+                        Text(hasDueDate ? dueDate.formatted(date: .abbreviated, time: .shortened) : "No due date")
+                            .font(.system(size: 14)).foregroundColor(.white)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $hasDueDate).tint(Colors.accentTeal)
+                }
+                .padding(16)
+                .background(Colors.bgSecondary)
+                .cornerRadius(16)
+                .padding(.bottom, hasDueDate ? 12 : 48)
+
+                if hasDueDate {
+                    DatePicker("", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
+                        .datePickerStyle(.graphical)
+                        .tint(Colors.accentTeal)
+                        .colorScheme(.dark)
+                        .padding(.bottom, 24)
+                }
+
+                Button {
+                    guard !taskTitle.isEmpty, !isSaving else { return }
+                    isSaving = true
+                    Task {
+                        await store.createTask(text: taskTitle, priority: priority,
+                                               dueDate: hasDueDate ? dueDate : nil)
+                        saved = true
+                        isSaving = false
+                    }
+                } label: {
+                    ZStack {
+                        if isSaving {
+                            ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .black))
+                        } else {
+                            Text("Save Task")
+                                .font(.system(size: 16, weight: .bold)).foregroundColor(.black)
+                        }
+                    }
+                    .frame(maxWidth: .infinity).padding(16)
+                    .background(taskTitle.isEmpty ? Colors.accentTeal.opacity(0.4) : Colors.accentTeal)
                     .cornerRadius(16)
-                    .padding(.bottom, 32)
-
-                HStack(spacing: 16) {
-                    InfoTile(icon: "calendar", label: "DUE DATE", value: "Today")
-                    InfoTile(icon: "clock",    label: "TIME",     value: "12:00 PM")
                 }
-                .padding(.bottom, 48)
-
-                NavigationLink(destination: SuccessView()) {
-                    Text("Save Task")
-                        .font(.system(size: 16, weight: .bold)).foregroundColor(.black)
-                        .frame(maxWidth: .infinity).padding(16)
-                        .background(Colors.accentTeal).cornerRadius(16)
-                }
+                .disabled(taskTitle.isEmpty || isSaving)
 
                 Spacer(minLength: 40)
             }
@@ -52,102 +100,173 @@ struct AddTaskView: View {
         }
         .background(Colors.bgPrimary)
         .navigationBarHidden(true)
+        .navigationDestination(isPresented: $saved) { SuccessView() }
     }
 }
 
-// MARK: ─── AddMembersView ─────────────────────────────────────────────────────
+
 struct AddMembersView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AppStore
 
-    let selected = [
-        ("Alex",   "https://i.pravatar.cc/150?img=47"),
-        ("Jordan", "https://i.pravatar.cc/150?img=11"),
-        ("Sarah",  "https://i.pravatar.cc/150?img=5"),
-    ]
+    let event: EventModel
+
+    @State private var searchText = ""
+    @State private var addingId: String? = nil
+
+    private var existingIds: Set<String> { Set(event.members.map { $0.id }) }
+
+    private var filteredUsers: [MemberModel] {
+        let q = searchText.lowercased()
+        return store.allUsers.filter { user in
+            !existingIds.contains(user.id) &&
+            (q.isEmpty || user.name.lowercased().contains(q) || user.email.lowercased().contains(q))
+        }
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 BackHeader(title: "Add Members")
-                    .padding(.bottom, 32)
-
-                TextField("Search name, email, or phone..", text: .constant(""))
-                    .foregroundColor(.white)
-                    .padding(16)
-                    .background(Colors.bgSecondary)
-                    .cornerRadius(16)
                     .padding(.bottom, 24)
 
-                NavigationLink(destination: InviteLinkView()) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "link").font(.system(size: 14)).foregroundColor(Colors.accentTeal)
-                        Text("Invite via link").font(.system(size: 12)).foregroundColor(Colors.accentTeal)
+           
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass").foregroundColor(Colors.textSecondary)
+                    TextField("Search name or email...", text: $searchText)
+                        .foregroundColor(.white).autocapitalization(.none).autocorrectionDisabled()
+                    if !searchText.isEmpty {
+                        Button { searchText = "" } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundColor(Colors.textSecondary)
+                        }
                     }
-                    .padding(.vertical, 8).padding(.horizontal, 16)
-                    .overlay(RoundedRectangle(cornerRadius: 24).stroke(Colors.accentTeal, lineWidth: 1))
                 }
-                .padding(.bottom, 32)
+                .padding(14)
+                .background(Colors.bgSecondary)
+                .cornerRadius(16)
+                .padding(.bottom, 24)
 
-                SectionLabel("SELECTED")
-                    .padding(.bottom, 24)
 
-                HStack(spacing: 24) {
-                    ForEach(selected, id: \.0) { name, url in
-                        VStack(spacing: 8) {
-                            ZStack(alignment: .topTrailing) {
-                                AsyncImage(url: URL(string: url)) { img in img.resizable().scaledToFill() }
-                                placeholder: { Circle().fill(Colors.bgSecondary) }
-                                    .frame(width: 64, height: 64)
-                                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Colors.accentTeal, lineWidth: 2))
+                if !event.members.isEmpty {
+                    SectionLabel("CURRENT MEMBERS").padding(.bottom, 16)
 
-                                ZStack {
-                                    Circle().fill(Color(hex: "#4C4C4E"))
-                                        .frame(width: 20, height: 20)
-                                        .overlay(Circle().stroke(Colors.bgPrimary, lineWidth: 2))
-                                    Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundColor(.white)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            ForEach(event.members) { member in
+                                VStack(spacing: 8) {
+                                    ZStack {
+                                        Circle().fill(Colors.bgSecondary).frame(width: 56, height: 56)
+                                        if member.avatarUrl.isEmpty {
+                                            Text(String(member.name.prefix(1)).uppercased())
+                                                .font(.system(size: 20, weight: .bold))
+                                                .foregroundColor(Colors.accentTeal)
+                                        } else {
+                                            AsyncImage(url: URL(string: member.avatarUrl)) { img in
+                                                img.resizable().scaledToFill()
+                                            } placeholder: { Circle().fill(Colors.bgSecondary) }
+                                            .frame(width: 56, height: 56).clipShape(Circle())
+                                        }
+                                    }
+                                    .overlay(Circle().stroke(Colors.accentTeal.opacity(0.4), lineWidth: 1.5))
+
+                                    Text(member.name.components(separatedBy: " ").first ?? member.name)
+                                        .font(.system(size: 11)).foregroundColor(.white)
+
+                                    Text(member.role.capitalized)
+                                        .font(.system(size: 9, weight: .bold))
+                                        .foregroundColor(member.role == "creator" ? .black : Colors.textSecondary)
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(member.role == "creator" ? Colors.accentTeal : Color.white.opacity(0.08))
+                                        .cornerRadius(6)
                                 }
-                                .offset(x: 6, y: -6)
                             }
-                            Text(name).font(.system(size: 12)).foregroundColor(.white)
+                        }
+                        .padding(.bottom, 24)
+                    }
+
+                    Divider().background(Color.white.opacity(0.06)).padding(.bottom, 24)
+                }
+
+                
+                SectionLabel("ADD MEMBERS").padding(.bottom, 16)
+
+                if store.allUsers.isEmpty {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            ProgressView().tint(Colors.accentTeal)
+                            Text("Loading users...").font(.system(size: 13)).foregroundColor(Colors.textSecondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 40)
+                } else if filteredUsers.isEmpty {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            Image(systemName: "person.slash")
+                                .font(.system(size: 36)).foregroundColor(Colors.textSecondary)
+                            Text(searchText.isEmpty ? "All users are already members" : "No users found")
+                                .font(.system(size: 14)).foregroundColor(Colors.textSecondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 40)
+                } else {
+                    VStack(spacing: 0) {
+                        ForEach(filteredUsers) { user in
+                            HStack(spacing: 14) {
+                    
+                                ZStack {
+                                    Circle().fill(Colors.bgSecondary).frame(width: 52, height: 52)
+                                    if user.avatarUrl.isEmpty {
+                                        Text(String(user.name.prefix(1)).uppercased())
+                                            .font(.system(size: 18, weight: .bold))
+                                            .foregroundColor(Colors.accentTeal)
+                                    } else {
+                                        AsyncImage(url: URL(string: user.avatarUrl)) { img in
+                                            img.resizable().scaledToFill()
+                                        } placeholder: { Circle().fill(Colors.bgSecondary) }
+                                        .frame(width: 52, height: 52).clipShape(Circle())
+                                    }
+                                }
+
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(user.name)
+                                        .font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                                    Text(user.email)
+                                        .font(.system(size: 11)).foregroundColor(Colors.textSecondary)
+                                }
+
+                                Spacer()
+
+                                
+                                Button {
+                                    addingId = user.id
+                                    Task {
+                                        await store.addMember(eventRawId: event.rawId, userId: user.id)
+                                        addingId = nil
+                                        dismiss()
+                                    }
+                                } label: {
+                                    if addingId == user.id {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: Colors.accentTeal))
+                                            .frame(width: 32, height: 32)
+                                    } else {
+                                        Image(systemName: "person.badge.plus")
+                                            .font(.system(size: 20)).foregroundColor(Colors.accentTeal)
+                                    }
+                                }
+                                .disabled(addingId != nil)
+                            }
+                            .padding(14)
+                            .background(Colors.bgSecondary)
+                            .cornerRadius(16)
+                            .padding(.bottom, 10)
                         }
                     }
                 }
-                .padding(.bottom, 40)
-
-                SectionLabel("SUGGESTED")
-                    .padding(.bottom, 24)
-
-                HStack {
-                    HStack(spacing: 16) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Colors.bgSecondary)
-                                .frame(width: 56, height: 56)
-                            Text("M").font(.system(size: 18, weight: .semibold)).foregroundColor(Colors.accentTeal)
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Marcus Aurelius").font(.system(size: 16, weight: .medium)).foregroundColor(.white)
-                            Text("marcus@philosophy.org").font(.system(size: 12)).foregroundColor(Colors.textSecondary)
-                        }
-                    }
-                    Spacer()
-                    Button { } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 16))
-                            .foregroundColor(Colors.textSecondary)
-                            .frame(width: 32, height: 32)
-                            .overlay(Circle().stroke(Colors.textSecondary, lineWidth: 1))
-                    }
-                }
-
-                Button { dismiss() } label: {
-                    Text("Add Members (3)")
-                        .font(.system(size: 14, weight: .bold)).foregroundColor(.black)
-                        .frame(maxWidth: .infinity).padding(16)
-                        .background(Colors.accentTeal).cornerRadius(16)
-                }
-                .padding(.top, 40)
 
                 Spacer(minLength: 40)
             }
@@ -156,10 +275,11 @@ struct AddMembersView: View {
         }
         .background(Colors.bgPrimary)
         .navigationBarHidden(true)
+        .task { await store.loadAllUsers() }
     }
 }
 
-// MARK: ─── InviteLinkView ────────────────────────────────────────────────────
+
 struct InviteLinkView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var copied = false
@@ -174,7 +294,6 @@ struct InviteLinkView: View {
                 BackHeader(title: "Invite via Link")
                     .padding(.bottom, 28)
 
-                // QR + header
                 VStack(spacing: 20) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 20)
@@ -197,11 +316,9 @@ struct InviteLinkView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.bottom, 28)
 
-                // Link bar
                 HStack {
                     Text("https://eventflow.app/inv/q8x9z2...")
-                        .font(.system(size: 13)).foregroundColor(.white)
-                        .lineLimit(1)
+                        .font(.system(size: 13)).foregroundColor(.white).lineLimit(1)
                     Spacer()
                     Button {
                         copied = true
@@ -217,12 +334,10 @@ struct InviteLinkView: View {
                     }
                 }
                 .padding(14)
-                .background(Color(hex: "#252527"))
-                .cornerRadius(16)
+                .background(Color(hex: "#252527")).cornerRadius(16)
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 1))
                 .padding(.bottom, 24)
 
-                // Share via
                 SectionLabel("SHARE VIA").padding(.bottom, 16)
                 HStack(spacing: 0) {
                     ForEach(shareOptions, id: \.0) { icon, label in
@@ -241,7 +356,6 @@ struct InviteLinkView: View {
                 }
                 .padding(.bottom, 24)
 
-                // Buttons
                 HStack(spacing: 12) {
                     Button { } label: {
                         HStack(spacing: 8) {
@@ -266,15 +380,14 @@ struct InviteLinkView: View {
 
                 Spacer(minLength: 40)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
+            .padding(.horizontal, 24).padding(.top, 16)
         }
         .background(Colors.bgPrimary)
         .navigationBarHidden(true)
     }
 }
 
-// MARK: ─── AddLocationView ───────────────────────────────────────────────────
+
 struct AddLocationView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var remind = true
@@ -289,17 +402,13 @@ struct AddLocationView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                BackHeader(title: "Add Location")
-                    .padding(.bottom, 20)
+                BackHeader(title: "Add Location").padding(.bottom, 20)
 
-                // Mini map placeholder
                 ZStack(alignment: .top) {
                     RoundedRectangle(cornerRadius: 24)
-                        .fill(Color(hex: "#141416"))
-                        .frame(height: 320)
+                        .fill(Color(hex: "#141416")).frame(height: 320)
                         .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.white.opacity(0.06), lineWidth: 1))
 
-                    // Grid lines (decorative)
                     Canvas { ctx, size in
                         let stride: CGFloat = 60
                         var x: CGFloat = 0
@@ -313,23 +422,17 @@ struct AddLocationView: View {
                             y += stride
                         }
                     }
-                    .frame(height: 320)
-                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .frame(height: 320).clipShape(RoundedRectangle(cornerRadius: 24))
 
-                    // Pin
                     Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 42))
-                        .foregroundColor(Colors.accentTeal)
-                        .shadow(color: Colors.accentTeal.opacity(0.4), radius: 12)
-                        .offset(y: 120)
+                        .font(.system(size: 42)).foregroundColor(Colors.accentTeal)
+                        .shadow(color: Colors.accentTeal.opacity(0.4), radius: 12).offset(y: 120)
 
-                    // Search overlay
                     VStack(spacing: 6) {
                         HStack(spacing: 10) {
                             Image(systemName: "magnifyingglass").foregroundColor(Color(hex: "#888888"))
                             TextField("Search location...", text: $searchQuery)
-                                .foregroundColor(.white)
-                                .font(.system(size: 14))
+                                .foregroundColor(.white).font(.system(size: 14))
                             if !searchQuery.isEmpty {
                                 Button { searchQuery = "" } label: {
                                     Image(systemName: "xmark").font(.system(size: 12)).foregroundColor(Color(hex: "#aaaaaa"))
@@ -337,8 +440,7 @@ struct AddLocationView: View {
                             }
                         }
                         .padding(.horizontal, 14).padding(.vertical, 10)
-                        .background(Color(hex: "#16161A").opacity(0.95))
-                        .cornerRadius(14)
+                        .background(Color(hex: "#16161A").opacity(0.95)).cornerRadius(14)
                         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.08), lineWidth: 1))
 
                         if !filtered.isEmpty {
@@ -355,8 +457,7 @@ struct AddLocationView: View {
                                     if s != filtered.last { Divider().background(Color.white.opacity(0.05)) }
                                 }
                             }
-                            .background(Color(hex: "#16161A").opacity(0.97))
-                            .cornerRadius(12)
+                            .background(Color(hex: "#16161A").opacity(0.97)).cornerRadius(12)
                             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.07), lineWidth: 1))
                         }
                     }
@@ -364,7 +465,6 @@ struct AddLocationView: View {
                 }
                 .padding(.bottom, 24)
 
-                // Toggle card
                 HStack(spacing: 16) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 14).fill(Color(hex: "#252527")).frame(width: 44, height: 44)
@@ -377,12 +477,9 @@ struct AddLocationView: View {
                             .font(.system(size: 12)).foregroundColor(Colors.textSecondary)
                     }
                     Spacer()
-                    Toggle("", isOn: $remind)
-                        .tint(Colors.accentTeal)
+                    Toggle("", isOn: $remind).tint(Colors.accentTeal)
                 }
-                .padding(18)
-                .background(Colors.bgSecondary)
-                .cornerRadius(20)
+                .padding(18).background(Colors.bgSecondary).cornerRadius(20)
                 .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.white.opacity(0.05), lineWidth: 1))
                 .padding(.bottom, 20)
 
@@ -395,15 +492,13 @@ struct AddLocationView: View {
 
                 Spacer(minLength: 40)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 16)
+            .padding(.horizontal, 24).padding(.top, 16)
         }
         .background(Colors.bgPrimary)
         .navigationBarHidden(true)
     }
 }
 
-// MARK: ─── SuccessView ───────────────────────────────────────────────────────
 struct SuccessView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -413,21 +508,17 @@ struct SuccessView: View {
             ZStack {
                 Circle().fill(Colors.accentTeal.opacity(0.1)).frame(width: 160, height: 160)
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(Colors.accentTeal)
+                    .font(.system(size: 80)).foregroundColor(Colors.accentTeal)
             }
             .padding(.bottom, 32)
 
             Text("Success!")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(Colors.textPrimary)
+                .font(.system(size: 28, weight: .bold)).foregroundColor(Colors.textPrimary)
                 .padding(.bottom, 16)
 
-            Text("Your event has been successfully created\nand saved to your calendar.")
-                .font(.system(size: 15))
-                .foregroundColor(Colors.textSecondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(6)
+            Text("Your task has been successfully created\nand saved.")
+                .font(.system(size: 15)).foregroundColor(Colors.textSecondary)
+                .multilineTextAlignment(.center).lineSpacing(6)
                 .padding(.bottom, 48)
 
             Button { dismiss() } label: {
@@ -445,7 +536,7 @@ struct SuccessView: View {
     }
 }
 
-// MARK: ─── Shared sub-components ─────────────────────────────────────────────
+
 struct BackHeader: View {
     @Environment(\.dismiss) private var dismiss
     let title: String
@@ -490,4 +581,191 @@ struct InfoTile: View {
         .background(Colors.bgSecondary)
         .cornerRadius(16)
     }
+}
+
+
+import MapKit
+
+struct LocationPickerSheet: View {
+    @Binding var selectedLocation: String
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var searchText    = ""
+    @State private var searchResults: [MKMapItem] = []
+    @State private var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 7.8731, longitude: 80.7718),
+        span:   MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+    )
+    @State private var selectedPin:  CLLocationCoordinate2D? = nil
+    @State private var isSearching   = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack(alignment: .top) {
+
+         
+                Map(coordinateRegion: $region,
+                    showsUserLocation: true,
+                    annotationItems: selectedPin.map { [PickedPin(coord: $0)] } ?? []) { pin in
+                    MapAnnotation(coordinate: pin.coord) {
+                        VStack(spacing: 0) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 36))
+                                .foregroundColor(Colors.accentTeal)
+                                .shadow(color: Colors.accentTeal.opacity(0.5), radius: 8)
+                            Circle()
+                                .fill(Colors.accentTeal.opacity(0.3))
+                                .frame(width: 12, height: 6)
+                                .scaleEffect(x: 1, y: 0.5)
+                        }
+                    }
+                }
+                .ignoresSafeArea(edges: .bottom)
+
+ 
+                VStack(spacing: 0) {
+        
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(Colors.textSecondary)
+                        TextField("Search location...", text: $searchText)
+                            .foregroundColor(.white)
+                            .autocorrectionDisabled()
+                            .onChange(of: searchText) { _, val in
+                                if val.isEmpty { searchResults = [] } else { search(val) }
+                            }
+                        if !searchText.isEmpty {
+                            Button { searchText = ""; searchResults = [] } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(Colors.textSecondary)
+                            }
+                        }
+                        if isSearching {
+                            ProgressView().tint(Colors.accentTeal).scaleEffect(0.8)
+                        }
+                    }
+                    .padding(14)
+                    .background(Color(hex: "#1C1C1E").opacity(0.97))
+                    .cornerRadius(16)
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.08), lineWidth: 1))
+                    .padding(.horizontal, 16).padding(.top, 16)
+                    .shadow(color: .black.opacity(0.4), radius: 10, y: 4)
+
+                    // Search results dropdown
+                    if !searchResults.isEmpty {
+                        VStack(spacing: 0) {
+                            ForEach(searchResults.prefix(5), id: \.self) { item in
+                                Button {
+                                    selectMapItem(item)
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "mappin.circle.fill")
+                                            .font(.system(size: 18))
+                                            .foregroundColor(Colors.accentTeal)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.name ?? "Unknown")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(.white)
+                                            if let addr = item.placemark.title {
+                                                Text(addr)
+                                                    .font(.system(size: 11))
+                                                    .foregroundColor(Colors.textSecondary)
+                                                    .lineLimit(1)
+                                            }
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 16).padding(.vertical, 12)
+                                }
+                                if item != searchResults.prefix(5).last {
+                                    Divider().background(Color.white.opacity(0.05))
+                                }
+                            }
+                        }
+                        .background(Color(hex: "#1C1C1E").opacity(0.97))
+                        .cornerRadius(16)
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.06), lineWidth: 1))
+                        .padding(.horizontal, 16).padding(.top, 8)
+                        .shadow(color: .black.opacity(0.4), radius: 10, y: 4)
+                    }
+
+                    Spacer()
+
+          
+                    if !selectedLocation.isEmpty || selectedPin != nil {
+                        VStack(spacing: 8) {
+                            if !selectedLocation.isEmpty {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .foregroundColor(Colors.accentTeal)
+                                    Text(selectedLocation)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(.white)
+                                        .lineLimit(2)
+                                    Spacer()
+                                }
+                                .padding(12)
+                                .background(Color(hex: "#1C1C1E").opacity(0.95))
+                                .cornerRadius(12)
+                            }
+
+                            Button {
+                                dismiss()
+                            } label: {
+                                Text("Confirm Location")
+                                    .font(.system(size: 16, weight: .bold)).foregroundColor(.black)
+                                    .frame(maxWidth: .infinity).padding(16)
+                                    .background(Colors.accentTeal).cornerRadius(16)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 32)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+            }
+            .navigationTitle("Pick Location")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.foregroundColor(Colors.accentTeal)
+                }
+            }
+            .preferredColorScheme(.dark)
+        }
+    }
+
+
+
+    private func search(_ query: String) {
+        isSearching = true
+        let req = MKLocalSearch.Request()
+        req.naturalLanguageQuery = query
+        req.region = region
+        MKLocalSearch(request: req).start { response, _ in
+            DispatchQueue.main.async {
+                isSearching = false
+                searchResults = response?.mapItems ?? []
+            }
+        }
+    }
+
+    private func selectMapItem(_ item: MKMapItem) {
+        let coord = item.placemark.coordinate
+        selectedPin = coord
+        selectedLocation = item.name ?? item.placemark.title ?? ""
+        searchText = ""
+        searchResults = []
+        withAnimation {
+            region = MKCoordinateRegion(
+                center: coord,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+        }
+    }
+}
+
+struct PickedPin: Identifiable {
+    let id = UUID()
+    let coord: CLLocationCoordinate2D
 }

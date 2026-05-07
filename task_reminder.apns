@@ -1,0 +1,13 @@
+{
+  "Simulator Target Bundle": "com.thiya.EventFlow",
+  "aps": {
+    "alert": {
+      "title": "📋 New Task Created",
+      "body": "Finalize UI and Prototypes · Due 20/4/2026  [🔴 High]"
+    },
+    "sound": "default",
+    "badge": 1
+  },
+  "taskId": "test-task-001",
+  "type": "task_created"
+}

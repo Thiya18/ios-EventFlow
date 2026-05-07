@@ -1,28 +1,22 @@
 // BiometricAuthManager.swift
 // EventFlow — Face ID / Touch ID Authentication
-// Drop into: EventFlow/Services/BiometricAuthManager.swift
 
 import LocalAuthentication
 import SwiftUI
 internal import Combine
 
-// MARK: - BiometricAuthManager
-
 final class BiometricAuthManager: ObservableObject {
 
     static let shared = BiometricAuthManager()
 
-    // Persisted preference
     @Published var isBiometricEnabled: Bool {
         didSet { UserDefaults.standard.set(isBiometricEnabled, forKey: "biometricEnabled") }
     }
 
-    // Current lock state
     @Published var isLocked: Bool = false
     @Published var authError: String = ""
     @Published var isAuthenticating: Bool = false
 
-    // Which biometric type is available on this device
     var biometricType: LABiometryType {
         let ctx = LAContext()
         _ = ctx.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
@@ -50,24 +44,16 @@ final class BiometricAuthManager: ObservableObject {
         isBiometricEnabled = UserDefaults.standard.bool(forKey: "biometricEnabled")
     }
 
-    // MARK: - Public API
-
-    /// Call this when the app enters the background
     func lock() {
         guard isBiometricEnabled else { return }
         DispatchQueue.main.async { self.isLocked = true }
     }
 
-    /// Call this when the app comes back to foreground
     func unlockIfNeeded() {
         guard isLocked, isBiometricEnabled else { return }
         authenticate(reason: "Unlock EventFlow")
     }
 
-    /// Authenticate with Face ID / Touch ID
-    /// - Parameters:
-    ///   - reason: String shown in the system prompt
-    ///   - completion: called on main thread with success flag
     func authenticate(reason: String = "Authenticate to continue",
                       completion: ((Bool) -> Void)? = nil) {
         let context = LAContext()
@@ -102,14 +88,11 @@ final class BiometricAuthManager: ObservableObject {
         }
     }
 
-    /// Toggle biometric setting — requires a successful auth before enabling
     func toggleBiometric(completion: @escaping (Bool) -> Void) {
         if isBiometricEnabled {
-            // Turning OFF — just disable, no auth needed
             isBiometricEnabled = false
             completion(true)
         } else {
-            // Turning ON — require successful auth first
             authenticate(reason: "Enable \(biometricLabel) for EventFlow") { [weak self] success in
                 if success { self?.isBiometricEnabled = true }
                 completion(success)
@@ -118,20 +101,15 @@ final class BiometricAuthManager: ObservableObject {
     }
 }
 
-// MARK: - BiometricLockGate
-// Place this overlay in ContentView so it covers the whole app when locked.
-
 struct BiometricLockGate: View {
     @ObservedObject private var auth = BiometricAuthManager.shared
 
     var body: some View {
         if auth.isLocked {
             ZStack {
-                // Blurred background
                 Color.black.opacity(0.92).ignoresSafeArea()
 
                 VStack(spacing: 32) {
-                    // App icon area
                     ZStack {
                         Circle()
                             .fill(Colors.accentTeal.opacity(0.15))
@@ -150,7 +128,6 @@ struct BiometricLockGate: View {
                             .foregroundColor(Colors.textSecondary)
                     }
 
-                    // Error message
                     if !auth.authError.isEmpty {
                         Text(auth.authError)
                             .font(.system(size: 13))
@@ -159,7 +136,6 @@ struct BiometricLockGate: View {
                             .padding(.horizontal, 40)
                     }
 
-                    // Unlock button
                     Button {
                         BiometricAuthManager.shared.authenticate(reason: "Unlock EventFlow")
                     } label: {
@@ -187,7 +163,6 @@ struct BiometricLockGate: View {
             }
             .transition(.opacity)
             .onAppear {
-                // Auto-trigger Face ID when gate appears
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                     BiometricAuthManager.shared.authenticate(reason: "Unlock EventFlow")
                 }
@@ -195,9 +170,6 @@ struct BiometricLockGate: View {
         }
     }
 }
-
-// MARK: - Face ID Login View
-// Use this on your SignInView instead of the placeholder
 
 struct FaceIDLoginView: View {
     @ObservedObject private var auth = BiometricAuthManager.shared
@@ -207,7 +179,6 @@ struct FaceIDLoginView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             VStack(spacing: 12) {
                 Text("Log in to EventFlow")
                     .font(.system(size: 28, weight: .bold))
@@ -221,7 +192,6 @@ struct FaceIDLoginView: View {
             .padding(.top, 60)
             .padding(.bottom, 60)
 
-            // Face ID icon
             ZStack {
                 Circle()
                     .stroke(Colors.accentTeal.opacity(animating ? 0.5 : 0.15), lineWidth: 2)
@@ -239,7 +209,6 @@ struct FaceIDLoginView: View {
             .onAppear { animating = true }
             .padding(.bottom, 60)
 
-            // Error
             if !auth.authError.isEmpty {
                 HStack(spacing: 8) {
                     Image(systemName: "xmark.circle.fill").foregroundColor(.red)
@@ -262,7 +231,6 @@ struct FaceIDLoginView: View {
 
             Spacer()
 
-            // USE FACE ID button
             Button {
                 auth.authenticate(reason: "Sign in to EventFlow") { success in
                     if success { onSuccess() }
@@ -291,7 +259,6 @@ struct FaceIDLoginView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 12)
 
-            // Try again button (shown after error)
             if !auth.authError.isEmpty {
                 Button {
                     auth.authenticate(reason: "Sign in to EventFlow") { success in
@@ -306,7 +273,6 @@ struct FaceIDLoginView: View {
             }
 
             Button {
-                // Navigate to PIN / password fallback
             } label: {
                 Text("Maybe Later")
                     .font(.system(size: 14))

@@ -1,0 +1,104 @@
+{
+  "info": {
+    "_postman_id": "eventflow-push-notifications",
+    "name": "EventFlow — Push Notifications",
+    "description": "Tests for all push notification endpoints.\n\nSteps:\n1. Run 'Login' to get a userId\n2. Copy userId into the collection variable\n3. Run tests in order"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api" },
+    { "key": "userId",   "value": "PASTE_USER_ID_HERE" },
+    { "key": "taskId",   "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/health"
+      }
+    },
+    {
+      "name": "2. Login (get userId)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/users/login",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"your@email.com\",\n  \"password\": \"yourpassword\"\n}"
+        }
+      }
+    },
+    {
+      "name": "3. Save FCM Token",
+      "request": {
+        "method": "PATCH",
+        "url": "{{base_url}}/users/{{userId}}/fcm-token",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fcmToken\": \"test-fake-token-simulator-123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "4. Get All Events (copy an eventId)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/events"
+      }
+    },
+    {
+      "name": "5. Create Task (triggers push 📋)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/tasks",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"Test push notification task\",\n  \"eventId\": \"PASTE_EVENT_ID_HERE\",\n  \"priority\": \"high\",\n  \"dueDate\": \"2026-04-21T10:00:00.000Z\",\n  \"creatorId\": \"{{userId}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "6. Get All Tasks (copy a taskId)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/tasks"
+      }
+    },
+    {
+      "name": "7. Toggle Task Done (triggers push ✅)",
+      "request": {
+        "method": "PATCH",
+        "url": "{{base_url}}/tasks/{{taskId}}/toggle"
+      }
+    },
+    {
+      "name": "8. Toggle Task Reopen (triggers push ↩️)",
+      "request": {
+        "method": "PATCH",
+        "url": "{{base_url}}/tasks/{{taskId}}/toggle"
+      }
+    },
+    {
+      "name": "9. Update Task Due Date (triggers push 📅)",
+      "request": {
+        "method": "PUT",
+        "url": "{{base_url}}/tasks/{{taskId}}",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"dueDate\": \"2026-04-25T09:00:00.000Z\"\n}"
+        }
+      }
+    },
+    {
+      "name": "10. Get Notifications (confirm auto-created)",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/notifications?userId={{userId}}"
+      }
+    }
+  ]
+}

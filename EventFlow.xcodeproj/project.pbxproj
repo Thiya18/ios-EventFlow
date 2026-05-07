@@ -6,19 +6,55 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		DF1ECAAA2FAD35C500364083 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = DFBEEF9C2F84DBAF003E03AA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DFBEEFA32F84DBAF003E03AA;
+			remoteInfo = EventFlow;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-		DF2E72482F9158C800400CDA /* EventFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		DF1ECAA62FAD35C500364083 /* EventFlowTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = EventFlowTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DFBEEFA42F84DBAF003E03AA /* EventFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = EventFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DF814DC72F9DDC5B00DD0A0B /* Exceptions for "EventFlow" folder in "EventFlow" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DFBEEFA32F84DBAF003E03AA /* EventFlow */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		DF8FDF852F8FF2760079D561 /* EventFlow */ = {
+		DF1ECAA72FAD35C500364083 /* EventFlowTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			path = EventFlowTests;
+			sourceTree = "<group>";
+		};
+		DFBEEFA62F84DBAF003E03AA /* EventFlow */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				DF814DC72F9DDC5B00DD0A0B /* Exceptions for "EventFlow" folder in "EventFlow" target */,
+			);
 			path = EventFlow;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		DF1ECAA32FAD35C500364083 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DFBEEFA12F84DBAF003E03AA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -32,14 +68,47 @@
 		DFBEEF9B2F84DBAF003E03AA = {
 			isa = PBXGroup;
 			children = (
-				DF8FDF852F8FF2760079D561 /* EventFlow */,
-				DF2E72482F9158C800400CDA /* EventFlow.app */,
+				DFBEEFA62F84DBAF003E03AA /* EventFlow */,
+				DF1ECAA72FAD35C500364083 /* EventFlowTests */,
+				DFBEEFA52F84DBAF003E03AA /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		DFBEEFA52F84DBAF003E03AA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DFBEEFA42F84DBAF003E03AA /* EventFlow.app */,
+				DF1ECAA62FAD35C500364083 /* EventFlowTests.xctest */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		DF1ECAA52FAD35C500364083 /* EventFlowTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DF1ECAAC2FAD35C500364083 /* Build configuration list for PBXNativeTarget "EventFlowTests" */;
+			buildPhases = (
+				DF1ECAA22FAD35C500364083 /* Sources */,
+				DF1ECAA32FAD35C500364083 /* Frameworks */,
+				DF1ECAA42FAD35C500364083 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				DF1ECAAB2FAD35C500364083 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				DF1ECAA72FAD35C500364083 /* EventFlowTests */,
+			);
+			name = EventFlowTests;
+			packageProductDependencies = (
+			);
+			productName = EventFlowTests;
+			productReference = DF1ECAA62FAD35C500364083 /* EventFlowTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		DFBEEFA32F84DBAF003E03AA /* EventFlow */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = DFBEEFAF2F84DBB0003E03AA /* Build configuration list for PBXNativeTarget "EventFlow" */;
@@ -53,13 +122,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				DF8FDF852F8FF2760079D561 /* EventFlow */,
+				DFBEEFA62F84DBAF003E03AA /* EventFlow */,
 			);
 			name = EventFlow;
 			packageProductDependencies = (
 			);
 			productName = EventFlow;
-			productReference = DF2E72482F9158C800400CDA /* EventFlow.app */;
+			productReference = DFBEEFA42F84DBAF003E03AA /* EventFlow.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -72,6 +141,10 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					DF1ECAA52FAD35C500364083 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = DFBEEFA32F84DBAF003E03AA;
+					};
 					DFBEEFA32F84DBAF003E03AA = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -87,16 +160,24 @@
 			mainGroup = DFBEEF9B2F84DBAF003E03AA;
 			minimizedProjectReferenceProxies = 1;
 			preferredProjectObjectVersion = 77;
-			productRefGroup = DFBEEF9B2F84DBAF003E03AA;
+			productRefGroup = DFBEEFA52F84DBAF003E03AA /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				DFBEEFA32F84DBAF003E03AA /* EventFlow */,
+				DF1ECAA52FAD35C500364083 /* EventFlowTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		DF1ECAA42FAD35C500364083 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DFBEEFA22F84DBAF003E03AA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -107,6 +188,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		DF1ECAA22FAD35C500364083 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		DFBEEFA02F84DBAF003E03AA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -116,7 +204,55 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		DF1ECAAB2FAD35C500364083 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DFBEEFA32F84DBAF003E03AA /* EventFlow */;
+			targetProxy = DF1ECAAA2FAD35C500364083 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		DF1ECAAD2FAD35C500364083 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.monilka.EventFlowTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EventFlow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/EventFlow";
+			};
+			name = Debug;
+		};
+		DF1ECAAE2FAD35C500364083 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.monilka.EventFlowTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EventFlow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/EventFlow";
+			};
+			name = Release;
+		};
 		DFBEEFAD2F84DBB0003E03AA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -241,12 +377,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EventFlow/EventFlow.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "we need to unclok your data";
+				INFOPLIST_KEY_NSUserNotificationsUsageDescription = "EventFlow sends task reminders and event updates to keep you on track.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes = "remote-notification";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -272,12 +412,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = EventFlow/EventFlow.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = "we need to unclok your data";
+				INFOPLIST_KEY_NSUserNotificationsUsageDescription = "EventFlow sends task reminders and event updates to keep you on track.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UIBackgroundModes = "remote-notification";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -301,6 +445,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		DF1ECAAC2FAD35C500364083 /* Build configuration list for PBXNativeTarget "EventFlowTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DF1ECAAD2FAD35C500364083 /* Debug */,
+				DF1ECAAE2FAD35C500364083 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		DFBEEF9F2F84DBAF003E03AA /* Build configuration list for PBXProject "EventFlow" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

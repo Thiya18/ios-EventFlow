@@ -1,3 +1,6 @@
+// Colors.swift
+// EventFlow design tokens — mirrors src/theme/colors.ts
+
 import SwiftUI
 
 enum Colors {
@@ -15,7 +18,6 @@ enum Colors {
     static let pink           = Color(hex: "#E040FB")
     static let red            = Color(hex: "#FF453A")
 }
-
 
 extension Color {
     init(hex: String) {
