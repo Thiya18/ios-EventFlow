@@ -1,29 +1,21 @@
-//
-//  Profile.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-30.
-//
-
 // ProfileView.swift
-// EventFlow — Profile with Face ID + Notifications wired up
+// EventFlow — Profile with real user data from AppStore
 
 import SwiftUI
 
 struct ProfileView: View {
     let onSignOut: () -> Void
+    @EnvironmentObject private var store: AppStore
     @ObservedObject private var auth = BiometricAuthManager.shared
     @ObservedObject private var nm   = NotificationManager.shared
-    @State private var showFaceIDAlert     = false
-    @State private var showNotifAlert      = false
-    @State private var showTestPanel       = false
+    @State private var showTestPanel = false
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
 
-                    // Header
+           
                     ZStack {
                         Text("Profile")
                             .font(.system(size: 18, weight: .semibold)).foregroundColor(Colors.textPrimary)
@@ -37,16 +29,34 @@ struct ProfileView: View {
                     }
                     .padding(.bottom, 28)
 
-                    // Avatar
+          
                     VStack(spacing: 14) {
                         ZStack(alignment: .bottomTrailing) {
-                            AsyncImage(url: URL(string: "https://i.pravatar.cc/150?img=47")) { img in
-                                img.resizable().scaledToFill()
-                            } placeholder: {
+                      
+                            if !store.userAvatar.isEmpty, let url = URL(string: store.userAvatar) {
+                                AsyncImage(url: url) { img in
+                                    img.resizable().scaledToFill()
+                                } placeholder: {
+                                    Circle().fill(Colors.bgSecondary)
+                                        .overlay(
+                                            Text(String(store.userName.prefix(1)).uppercased())
+                                                .font(.system(size: 36, weight: .bold))
+                                                .foregroundColor(Colors.accentTeal)
+                                        )
+                                }
+                                .frame(width: 96, height: 96).clipShape(Circle())
+                                .overlay(Circle().stroke(Colors.accentTeal, lineWidth: 3))
+                            } else {
+                             
                                 Circle().fill(Colors.bgSecondary)
+                                    .frame(width: 96, height: 96)
+                                    .overlay(Circle().stroke(Colors.accentTeal, lineWidth: 3))
+                                    .overlay(
+                                        Text(String(store.userName.prefix(1)).uppercased())
+                                            .font(.system(size: 36, weight: .bold))
+                                            .foregroundColor(Colors.accentTeal)
+                                    )
                             }
-                            .frame(width: 96, height: 96).clipShape(Circle())
-                            .overlay(Circle().stroke(Colors.accentTeal, lineWidth: 3))
 
                             ZStack {
                                 Circle().fill(Colors.accentTeal)
@@ -56,75 +66,65 @@ struct ProfileView: View {
                                     .font(.system(size: 12)).foregroundColor(.black)
                             }
                         }
-                        Text("Thiya")
+
+                       
+                        Text(store.userName.isEmpty ? "User" : store.userName)
                             .font(.system(size: 22, weight: .bold)).foregroundColor(Colors.textPrimary)
-                        Text("thiya2003@gmail.com")
+
+            
+                        Text(store.userEmail.isEmpty ? "No email" : store.userEmail)
                             .font(.system(size: 13)).foregroundColor(Colors.textSecondary)
                     }
                     .padding(.bottom, 28)
 
-                    // Stats
                     HStack(spacing: 16) {
-                        ForEach([("34","Events Created"), ("40","Following"), ("12","Done")], id: \.0) { val, label in
-                            VStack(spacing: 4) {
-                                Text(val).font(.system(size: 22, weight: .bold)).foregroundColor(Colors.accentTeal)
-                                Text(label).font(.system(size: 10)).foregroundColor(Colors.textSecondary).multilineTextAlignment(.center)
-                            }
-                            .frame(maxWidth: .infinity).padding(16)
-                            .background(Colors.bgSecondary).cornerRadius(16)
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 1))
-                        }
+                        StatCard(value: "\(store.events.count)", label: "Events")
+                        StatCard(value: "\(store.doneTasks)", label: "Done")
+                        StatCard(value: "\(store.pendingTasks)", label: "Pending")
                     }
                     .padding(.bottom, 28)
 
-                    // Security section
+           
                     VStack(alignment: .leading, spacing: 12) {
                         Text("SECURITY & ACCESS")
                             .font(.system(size: 12)).kerning(1).foregroundColor(Colors.textSecondary)
 
                         VStack(spacing: 0) {
 
-                            // ── Face ID / Touch ID Row ────────────────────
-                            HStack(spacing: 14) {
-                                Image(systemName: auth.biometricIcon)
-                                    .font(.system(size: 18)).foregroundColor(Colors.accentTeal)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    // FIX 1: biometricTypeName → biometricLabel
-                                    Text(auth.biometricLabel)
-                                        .font(.system(size: 14, weight: .medium)).foregroundColor(Colors.textPrimary)
-                                    // FIX 2: $auth.isBiometricAvailable නෑ → biometricType == .none
-                                    if auth.biometricType == .none {
-                                        Text("Not available on this device")
-                                            .font(.system(size: 11)).foregroundColor(Colors.textSecondary)
-                                    }
-                                }
-                                Spacer()
-                                Toggle(isOn: Binding(
-                                    get: { auth.isBiometricEnabled },
-                                    set: { newValue in
-                                        if newValue {
-                                            // FIX 3: biometricTypeName → biometricLabel
-                                            // FIX 4: authenticate signature — use completion, not onSuccess/onFailure
-                                            auth.authenticate(
-                                                reason: "Confirm your identity to enable \(auth.biometricLabel)"
-                                            ) { success in
-                                                if !success { auth.isBiometricEnabled = false }
-                                            }
-                                        } else {
-                                            auth.isBiometricEnabled = false
-                                        }
-                                    }
-                                )) {
-                                    EmptyView()
-                                }
-                                .tint(Colors.accentTeal)
-                                // FIX 5: isBiometricAvailable නෑ → biometricType == .none
-                                .disabled(auth.biometricType == .none)
-                            }
-                            .padding(.vertical, 14)
+                            // Face ID / Touch ID Row
+//                            HStack(spacing: 14) {
+//                                Image(systemName: auth.biometricIcon)
+//                                    .font(.system(size: 18)).foregroundColor(Colors.accentTeal)
+//                                VStack(alignment: .leading, spacing: 2) {
+//                                    Text(auth.biometricLabel)
+//                                        .font(.system(size: 14, weight: .medium)).foregroundColor(Colors.textPrimary)
+//                                    if auth.biometricType == .none {
+//                                        Text("Not available on this device")
+//                                            .font(.system(size: 11)).foregroundColor(Colors.textSecondary)
+//                                    }
+//                                }
+//                                Spacer()
+//                                Toggle(isOn: Binding(
+//                                    get: { auth.isBiometricEnabled },
+//                                    set: { newValue in
+//                                        if newValue {
+//                                            auth.authenticate(
+//                                                reason: "Confirm your identity to enable \(auth.biometricLabel)"
+//                                            ) { success in
+//                                                if !success { auth.isBiometricEnabled = false }
+//                                            }
+//                                        } else {
+//                                            auth.isBiometricEnabled = false
+//                                        }
+//                                    }
+//                                )) { EmptyView() }
+//                                .tint(Colors.accentTeal)
+//                                .disabled(auth.biometricType == .none)
+//                            }
+//                            .padding(.vertical, 14)
                             Divider().background(Color(hex: "#2C2C2E"))
 
-                            // ── Push Notifications Row ────────────────────
+                         
                             Button {
                                 if nm.permissionGranted {
                                     showTestPanel.toggle()
@@ -140,7 +140,7 @@ struct ProfileView: View {
                                     Text("Push Notifications")
                                         .font(.system(size: 14, weight: .medium)).foregroundColor(Colors.textPrimary)
                                     Spacer()
-                                    Text(nm.permissionGranted ? "On" : "Off")
+                                    Text(nm.permissionGranted ? "On" : "On")
                                         .font(.system(size: 13))
                                         .foregroundColor(nm.permissionGranted ? Colors.accentTeal : Colors.textSecondary)
                                     Image(systemName: "chevron.right")
@@ -150,7 +150,7 @@ struct ProfileView: View {
                             }
                             Divider().background(Color(hex: "#2C2C2E"))
 
-                            // ── Location Row ──────────────────────────────
+                       
                             HStack(spacing: 14) {
                                 Image(systemName: "location.fill")
                                     .font(.system(size: 18)).foregroundColor(Colors.accentTeal)
@@ -171,14 +171,14 @@ struct ProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 20)
 
-                    // Notification test panel
+              
                     if showTestPanel {
                         NotificationTestPanel()
                             .padding(.bottom, 20)
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
-                    // Sign out
+                  
                     Button(action: onSignOut) {
                         HStack(spacing: 8) {
                             Image(systemName: "rectangle.portrait.and.arrow.right").foregroundColor(Colors.error)
@@ -196,12 +196,31 @@ struct ProfileView: View {
             }
             .background(Colors.bgPrimary)
             .animation(.easeInOut, value: showTestPanel)
+            .refreshable { await store.load() }
+            .task {
+          
+                await store.load()
+            }
         }
     }
 }
 
-// MARK: ─── SettingsView ───────────────────────────────────────────────────────
+struct StatCard: View {
+    let value: String
+    let label: String
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value).font(.system(size: 22, weight: .bold)).foregroundColor(Colors.accentTeal)
+            Text(label).font(.system(size: 10)).foregroundColor(Colors.textSecondary).multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity).padding(16)
+        .background(Colors.bgSecondary).cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.05), lineWidth: 1))
+    }
+}
+
 struct SettingsView: View {
+    @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -231,12 +250,17 @@ struct SettingsView: View {
                 SettingsSectionHeader("ACCOUNT")
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .top, spacing: 16) {
-                        Image(systemName: "envelope.fill").font(.system(size: 20)).foregroundColor(Color(hex: "#E0E0E0")).padding(.top, 2)
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 20)).foregroundColor(Color(hex: "#E0E0E0")).padding(.top, 2)
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Email Address").font(.system(size: 14, weight: .semibold)).foregroundColor(Color(hex: "#E0E0E0"))
-                            Text("thiya2003@gmail.com").font(.system(size: 13)).foregroundColor(Colors.textSecondary).padding(.bottom, 16)
+                            Text("Email Address")
+                                .font(.system(size: 14, weight: .semibold)).foregroundColor(Color(hex: "#E0E0E0"))
+                            // Real email from store
+                            Text(store.userEmail.isEmpty ? "No email set" : store.userEmail)
+                                .font(.system(size: 13)).foregroundColor(Colors.textSecondary).padding(.bottom, 16)
                             Button { } label: {
-                                Text("UPDATE EMAIL").font(.system(size: 11, weight: .black)).kerning(0.5).foregroundColor(Colors.accentTeal)
+                                Text("UPDATE EMAIL")
+                                    .font(.system(size: 11, weight: .black)).kerning(0.5).foregroundColor(Colors.accentTeal)
                             }
                         }
                     }

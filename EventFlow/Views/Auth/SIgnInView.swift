@@ -1,7 +1,4 @@
-// SignInView.swift  (UPDATED — real Face ID via LocalAuthentication)
-// EventFlow — Sign In with Face ID
-// Drop into: EventFlow/Views/Auth/SignInView.swift
-
+// SignInView.swift
 import SwiftUI
 import LocalAuthentication
 
@@ -9,13 +6,17 @@ struct SignInView: View {
     @EnvironmentObject private var store: AppStore
     @ObservedObject private var auth = BiometricAuthManager.shared
 
-    @State private var email      = ""
-    @State private var showFaceID = false
-    @State private var isSignedIn = false
+    @State private var email        = ""
+    @State private var password     = ""
+    @State private var showPassword = false
+    @State private var showFaceID   = false
+    @State private var faceIDEmail  = ""
+    @State private var faceIDError  = ""
+    @State private var showPermissionAlert = false
 
     var body: some View {
-        if isSignedIn {
-            MainTabView(onSignOut: { /* handle sign out */ })
+        if store.isLoggedIn {
+            MainTabView(onSignOut: { store.signOut() })
         } else if showFaceID {
             faceIDPage
         } else {
@@ -23,59 +24,84 @@ struct SignInView: View {
         }
     }
 
-    // MARK: - Login page (with Face ID option)
 
     private var loginPage: some View {
         ZStack {
             Colors.bgPrimary.ignoresSafeArea()
-
             VStack(spacing: 0) {
-                // Back + Sign Up nav
+
                 HStack {
-                    Button { showFaceID = false } label: {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                    }
                     Spacer()
                     Button("Sign Up") {}
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.blue)
+                        .font(.system(size: 15, weight: .semibold)).foregroundColor(.blue)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
+                .padding(.horizontal, 24).padding(.top, 20)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Log in").font(.system(size: 32, weight: .bold)).foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24).padding(.top, 32).padding(.bottom, 28)
+                Text("Log in")
+                    .font(.system(size: 32, weight: .bold)).foregroundColor(.white)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 24).padding(.top, 32).padding(.bottom, 28)
 
-                // Email field
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("EMAIL").font(.system(size: 11, weight: .bold)).kerning(1).foregroundColor(Colors.textSecondary)
+                    Text("EMAIL")
+                        .font(.system(size: 11, weight: .bold)).kerning(1)
+                        .foregroundColor(Colors.textSecondary)
                     HStack {
                         TextField("your@email.com", text: $email)
                             .foregroundColor(.white).font(.system(size: 15))
                             .keyboardType(.emailAddress).autocapitalization(.none)
+                            .autocorrectionDisabled()
                         if !email.isEmpty {
                             Button { email = "" } label: {
-                                Image(systemName: "xmark").font(.system(size: 12)).foregroundColor(Colors.textSecondary)
+                                Image(systemName: "xmark").font(.system(size: 12))
+                                    .foregroundColor(Colors.textSecondary)
                             }
                         }
                     }
-                    .padding(16)
-                    .background(Color(hex: "#1C1C1E"))
-                    .cornerRadius(14)
+                    .padding(16).background(Color(hex: "#1C1C1E")).cornerRadius(14)
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                }
+                .padding(.horizontal, 24).padding(.bottom, 16)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PASSWORD")
+                        .font(.system(size: 11, weight: .bold)).kerning(1)
+                        .foregroundColor(Colors.textSecondary)
+                    HStack {
+                        if showPassword {
+                            TextField("Enter password", text: $password)
+                                .foregroundColor(.white).font(.system(size: 15))
+                                .autocapitalization(.none).autocorrectionDisabled()
+                        } else {
+                            SecureField("Enter password", text: $password)
+                                .foregroundColor(.white).font(.system(size: 15))
+                        }
+                        Button { showPassword.toggle() } label: {
+                            Image(systemName: showPassword ? "eye.slash" : "eye")
+                                .font(.system(size: 14)).foregroundColor(Colors.textSecondary)
+                        }
+                    }
+                    .padding(16).background(Color(hex: "#1C1C1E")).cornerRadius(14)
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.1), lineWidth: 1))
                 }
                 .padding(.horizontal, 24).padding(.bottom, 20)
 
-                // ── Face ID quick login ──────────────────────────────────
+                if !store.authError.isEmpty {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 14)).foregroundColor(.red)
+                        Text(store.authError).font(.system(size: 13)).foregroundColor(.red)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 24).padding(.bottom, 12)
+                }
+
+            
                 Button {
-                    showFaceID = true
-                    // Auto-trigger Face ID after navigation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    faceIDError = ""
+                    faceIDEmail = email
+                    showFaceID  = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                         triggerFaceID()
                     }
                 } label: {
@@ -87,37 +113,38 @@ struct SignInView: View {
                     }
                     .foregroundColor(Colors.accentTeal)
                     .frame(maxWidth: .infinity).frame(height: 54)
-                    .background(Colors.accentTeal.opacity(0.1))
-                    .cornerRadius(16)
+                    .background(Colors.accentTeal.opacity(0.1)).cornerRadius(16)
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(Colors.accentTeal.opacity(0.4), lineWidth: 1))
                 }
                 .padding(.horizontal, 24).padding(.bottom, 12)
 
-                // Standard login
                 Button {
-                    isSignedIn = true
+                    Task { await store.login(email: email, password: password) }
                 } label: {
-                    Text("LOG IN")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity).frame(height: 54)
-                        .background(Color.blue)
-                        .cornerRadius(16)
+                    ZStack {
+                        if store.isAuthLoading {
+                            ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            Text("LOG IN").font(.system(size: 15, weight: .bold)).foregroundColor(.white)
+                        }
+                    }
+                    .frame(maxWidth: .infinity).frame(height: 54)
+                    .background(canLogin ? Color.blue : Color.blue.opacity(0.4)).cornerRadius(16)
                 }
+                .disabled(!canLogin || store.isAuthLoading)
                 .padding(.horizontal, 24)
 
-                // Divider
                 HStack {
                     Rectangle().fill(Color.white.opacity(0.1)).frame(height: 1)
-                    Text("Or connect using social account").font(.system(size: 12)).foregroundColor(Colors.textSecondary).fixedSize()
+                    Text("Or connect using social account")
+                        .font(.system(size: 12)).foregroundColor(Colors.textSecondary).fixedSize()
                     Rectangle().fill(Color.white.opacity(0.1)).frame(height: 1)
                 }
                 .padding(.horizontal, 24).padding(.vertical, 24)
 
-                // Social login options
                 VStack(spacing: 12) {
                     socialButton(icon: "f.square.fill", color: Color(hex: "#1877F2"), label: "Connect with Facebook")
-                    socialButton(icon: "phone.fill", color: Color(hex: "#34A853"), label: "Connect with Phone number")
+                    socialButton(icon: "phone.fill",   color: Color(hex: "#34A853"), label: "Connect with Phone number")
                 }
                 .padding(.horizontal, 24)
 
@@ -126,57 +153,83 @@ struct SignInView: View {
         }
     }
 
-    // MARK: - Face ID page
+    private var canLogin: Bool { !email.isEmpty && !password.isEmpty }
+
+
 
     private var faceIDPage: some View {
         ZStack {
             Colors.bgPrimary.ignoresSafeArea()
-
             VStack(spacing: 0) {
-                // Back + Sign Up
+
                 HStack {
-                    Button { showFaceID = false } label: {
-                        Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold)).foregroundColor(.white)
+                    Button { showFaceID = false; faceIDError = "" } label: {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 17, weight: .semibold)).foregroundColor(.white)
                     }
                     Spacer()
-                    Button("Sign Up") {}.font(.system(size: 15, weight: .semibold)) .foregroundColor(.blue)
+                    Button("Sign Up") {}
+                        .font(.system(size: 15, weight: .semibold)).foregroundColor(.blue)
                 }
                 .padding(.horizontal, 24).padding(.top, 20)
 
-                // Title
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Log in to \(auth.biometricLabel)")
+                    Text("Log in with \(auth.biometricLabel)")
                         .font(.system(size: 28, weight: .bold)).foregroundColor(.white)
-                    Text("Allow Sign In With \(auth.biometricLabel)?")
-                        .font(.system(size: 15)).foregroundColor(Colors.textSecondary)
+
+                    if !faceIDEmail.isEmpty {
+                        HStack(spacing: 6) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 12)).foregroundColor(Colors.accentTeal)
+                            Text(faceIDEmail)
+                                .font(.system(size: 13)).foregroundColor(Colors.textSecondary)
+                        }
+                        .padding(.top, 4)
+                    } else {
+                        Text("Scan your face to sign in")
+                            .font(.system(size: 15)).foregroundColor(Colors.textSecondary)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24).padding(.top, 40).padding(.bottom, 50)
 
-                // Animated Face ID icon
                 FaceIDIconView(isAuthenticating: auth.isAuthenticating)
-                    .padding(.bottom, 50)
+                    .padding(.bottom, 40)
 
-                // Error message
-                if !auth.authError.isEmpty {
+                if !faceIDError.isEmpty {
                     VStack(spacing: 6) {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 28)).foregroundColor(.red)
-                        Text("Face Not Recognised")
-                            .font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
-                        Text("Try Again")
-                            .font(.system(size: 14)).foregroundColor(Colors.textSecondary)
+                        Text(faceIDError)
+                            .font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                            .multilineTextAlignment(.center)
                     }
                     .padding(20)
-                    .background(Color.red.opacity(0.1))
-                    .cornerRadius(16)
+                    .background(Color.red.opacity(0.1)).cornerRadius(16)
+                    .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.red.opacity(0.3), lineWidth: 1))
+                    .padding(.horizontal, 40).padding(.bottom, 20)
+                } else if !auth.authError.isEmpty {
+                    VStack(spacing: 6) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28)).foregroundColor(.red)
+                        Text("Face Not Recognised").font(.system(size: 16, weight: .semibold)).foregroundColor(.white)
+                        Text("Try Again").font(.system(size: 14)).foregroundColor(Colors.textSecondary)
+                    }
+                    .padding(20)
+                    .background(Color.red.opacity(0.1)).cornerRadius(16)
                     .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.red.opacity(0.3), lineWidth: 1))
                     .padding(.horizontal, 40).padding(.bottom, 20)
                 }
 
                 Spacer()
 
-                // USE FACE ID
+                if faceIDEmail.isEmpty {
+                    Text("Tip: Enter your email on the login screen first for faster sign-in")
+                        .font(.system(size: 12)).foregroundColor(Colors.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40).padding(.bottom, 16)
+                }
+
                 Button(action: triggerFaceID) {
                     ZStack {
                         if auth.isAuthenticating {
@@ -187,24 +240,17 @@ struct SignInView: View {
                         }
                     }
                     .frame(maxWidth: .infinity).frame(height: 54)
-                    .background(Color.blue)
-                    .cornerRadius(16)
+                    .background(Color.blue).cornerRadius(16)
                 }
                 .disabled(auth.isAuthenticating)
                 .padding(.horizontal, 24).padding(.bottom, 12)
 
-                Button { showFaceID = false } label: {
+                Button { showFaceID = false; faceIDError = "" } label: {
                     Text("Maybe Later").font(.system(size: 14)).foregroundColor(Colors.textSecondary)
                 }
-                .padding(.bottom, 12)
-
-                Text("We'll require face recognition after 2 minutes of inactivity.\nYou can change the frequency in app settings.")
-                    .font(.system(size: 11)).foregroundColor(Colors.textSecondary.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40).padding(.bottom, 40)
+                .padding(.bottom, 40)
             }
         }
-        // System Face ID permission dialog — shown automatically when we call evaluate
         .alert("Allow EventFlow to use Face ID?", isPresented: $showPermissionAlert) {
             Button("OK") { triggerFaceID() }
             Button("Don't Allow", role: .cancel) { showFaceID = false }
@@ -213,18 +259,35 @@ struct SignInView: View {
         }
     }
 
-    @State private var showPermissionAlert = false
+  
 
     private func triggerFaceID() {
+        faceIDError = ""
         auth.authenticate(reason: "Sign in to EventFlow") { success in
-            if success {
-                withAnimation { isSignedIn = true }
+            guard success else { return }
+
+           
+            if !faceIDEmail.isEmpty {
+                Task {
+                    await store.loginWithFaceID(email: faceIDEmail)
+                    if store.authError.isEmpty {
+                        withAnimation { store.isLoggedIn = true }
+                    } else {
+                        faceIDError = store.authError
+                    }
+                }
+            } else if !store.currentUserId.isEmpty {
+            
+                withAnimation { store.isLoggedIn = true }
+                Task { await store.load() }
+            } else {
+          
+                faceIDError = "Enter your email on the login screen, then try again."
             }
         }
     }
 
-    // MARK: - Social button helper
-
+ 
     private func socialButton(icon: String, color: Color, label: String) -> some View {
         Button {} label: {
             HStack(spacing: 12) {
@@ -239,7 +302,7 @@ struct SignInView: View {
     }
 }
 
-// MARK: - Face ID Animated Icon
+
 
 struct FaceIDIconView: View {
     let isAuthenticating: Bool
@@ -251,28 +314,15 @@ struct FaceIDIconView: View {
                 .stroke(Color.red.opacity(pulse ? 0.4 : 0.1), lineWidth: 2)
                 .frame(width: pulse ? 140 : 110, height: pulse ? 140 : 110)
                 .animation(.easeInOut(duration: 1.3).repeatForever(autoreverses: true), value: pulse)
-
-            Circle()
-                .fill(Color(hex: "#1C1C1E"))
-                .frame(width: 100, height: 100)
+            Circle().fill(Color(hex: "#1C1C1E")).frame(width: 100, height: 100)
                 .shadow(color: .black.opacity(0.3), radius: 12)
-
             if isAuthenticating {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .red))
-                    .scaleEffect(1.5)
+                ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .red)).scaleEffect(1.5)
             } else {
-                // Face ID scan lines (simplified SVG-style)
                 VStack(spacing: 6) {
-                    HStack(spacing: 30) {
-                        faceCorner(corners: [.topLeft])
-                        faceCorner(corners: [.topRight])
-                    }
+                    HStack(spacing: 30) { faceCorner(); faceCorner() }
                     Spacer().frame(height: 20)
-                    HStack(spacing: 30) {
-                        faceCorner(corners: [.bottomLeft])
-                        faceCorner(corners: [.bottomRight])
-                    }
+                    HStack(spacing: 30) { faceCorner(); faceCorner() }
                 }
                 .frame(width: 60, height: 60)
             }
@@ -280,11 +330,8 @@ struct FaceIDIconView: View {
         .onAppear { pulse = true }
     }
 
-    private func faceCorner(corners: UIRectCorner) -> some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.red.opacity(0.8), lineWidth: 2)
-                .frame(width: 16, height: 16)
-        }
+    private func faceCorner() -> some View {
+        RoundedRectangle(cornerRadius: 4).stroke(Color.red.opacity(0.8), lineWidth: 2)
+            .frame(width: 16, height: 16)
     }
 }
