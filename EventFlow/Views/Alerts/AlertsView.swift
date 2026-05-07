@@ -1,31 +1,23 @@
-//
-//  AlertsView.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-27.
-//
-
 // AlertsView.swift
 
 import SwiftUI
 
 struct AlertsView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var alerts = AlertModel.samples
+    @EnvironmentObject private var store: AppStore
     @State private var filter: AlertFilter = .all
 
     enum AlertFilter { case all, unread }
 
-    private var unreadCount: Int { alerts.filter { !$0.read }.count }
+    private var unreadCount: Int { store.alerts.filter { !$0.read }.count }
     private var visible: [AlertModel] {
-        filter == .unread ? alerts.filter { !$0.read } : alerts
+        filter == .unread ? store.alerts.filter { !$0.read } : store.alerts
     }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
 
-                // Header
                 HStack {
                     HStack(spacing: 8) {
                         Button { dismiss() } label: {
@@ -45,7 +37,9 @@ struct AlertsView: View {
                     }
                     Spacer()
                     if unreadCount > 0 {
-                        Button { markAllRead() } label: {
+                        Button {
+                            Task { await store.markAllRead() }
+                        } label: {
                             Text("Mark all read")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(Colors.accentTeal)
@@ -54,7 +48,7 @@ struct AlertsView: View {
                 }
                 .padding(.bottom, 28)
 
-                // Filter tabs
+                
                 HStack(spacing: 8) {
                     ForEach([AlertFilter.all, AlertFilter.unread], id: \.self) { f in
                         let label = f == .all ? "All" : (unreadCount > 0 ? "Unread (\(unreadCount))" : "Unread")
@@ -73,7 +67,7 @@ struct AlertsView: View {
                 .cornerRadius(14)
                 .padding(.bottom, 24)
 
-                // Empty state
+ 
                 if visible.isEmpty {
                     VStack(spacing: 16) {
                         ZStack {
@@ -87,13 +81,13 @@ struct AlertsView: View {
                     .padding(.vertical, 60)
                 }
 
-                // Alert cards
+       
                 ForEach(visible) { alert in
                     AlertCard(
                         alert: alert,
-                        onTap: { markRead(id: alert.id) },
-                        onDismiss: { dismissAlert(id: alert.id) },
-                        onAction: { markRead(id: alert.id) }
+                        onTap:    { Task { await store.markRead(id: alert.id) } },
+                        onDismiss:{ Task { await store.dismissAlert(id: alert.id) } },
+                        onAction: { Task { await store.markRead(id: alert.id) } }
                     )
                 }
 
@@ -104,20 +98,11 @@ struct AlertsView: View {
         }
         .background(Colors.bgPrimary)
         .navigationBarHidden(true)
-    }
-
-    private func markAllRead() {
-        for i in alerts.indices { alerts[i].read = true }
-    }
-    private func markRead(id: Int) {
-        if let i = alerts.firstIndex(where: { $0.id == id }) { alerts[i].read = true }
-    }
-    private func dismissAlert(id: Int) {
-        alerts.removeAll { $0.id == id }
+        .task { await store.loadAlerts() }
     }
 }
 
-// MARK: - Alert Card
+
 struct AlertCard: View {
     let alert: AlertModel
     let onTap: () -> Void
@@ -128,7 +113,7 @@ struct AlertCard: View {
         Button(action: onTap) {
             ZStack(alignment: .topTrailing) {
                 HStack(alignment: .top, spacing: 14) {
-                    // Icon bubble
+ 
                     ZStack {
                         RoundedRectangle(cornerRadius: 14)
                             .fill(alert.iconBg)
@@ -188,7 +173,7 @@ struct AlertCard: View {
                 }
                 .padding(16)
 
-                // Unread dot
+         
                 if !alert.read {
                     Circle()
                         .fill(Colors.accentTeal)
@@ -208,5 +193,4 @@ struct AlertCard: View {
     }
 }
 
-// Conform AlertFilter to Hashable for ForEach
 extension AlertsView.AlertFilter: Hashable {}

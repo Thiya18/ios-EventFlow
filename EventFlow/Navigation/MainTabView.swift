@@ -24,7 +24,6 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Custom Tab Bar
             CustomTabBar(selected: $selectedTab)
         }
         .background(Colors.bgPrimary.ignoresSafeArea())
@@ -32,7 +31,6 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Custom Tab Bar
 struct CustomTabBar: View {
     @Binding var selected: MainTabView.Tab
 
@@ -41,7 +39,6 @@ struct CustomTabBar: View {
             TabBarItem(icon: "house.fill",       tab: .home,     selected: $selected)
             TabBarItem(icon: "calendar",          tab: .calendar, selected: $selected)
 
-            // Centre "plus" button
             Button {
                 selected = .create
             } label: {
@@ -89,7 +86,7 @@ struct TabBarItem: View {
     }
 }
 
-// MARK: - Rounded corner helper
+
 struct RoundedCornersShape: Shape {
     var corners: UIRectCorner
     var radius: CGFloat

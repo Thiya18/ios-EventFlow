@@ -1,11 +1,4 @@
-//
-//  HomeView.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-16.
-//
-
-
+// HomeView.swift
 
 import SwiftUI
 
@@ -16,8 +9,6 @@ struct HomeView: View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
-
-   
                     HStack {
                         HStack(spacing: 12) {
                             AsyncImage(url: URL(string: store.userAvatar)) { img in
@@ -54,7 +45,6 @@ struct HomeView: View {
                     }
                     .padding(.bottom, 32)
 
-   
                     WeeklyProgressCard(
                         progress:  store.taskProgress,
                         completed: store.doneTasks,
@@ -68,7 +58,6 @@ struct HomeView: View {
                         .padding(.bottom, 16)
 
                     if store.events.isEmpty {
-                        // Empty state
                         VStack(spacing: 12) {
                             Image(systemName: "calendar.badge.plus")
                                 .font(.system(size: 36))
@@ -86,9 +75,8 @@ struct HomeView: View {
                         .cornerRadius(24)
                         .padding(.bottom, 24)
                     } else {
-                 
                         ForEach(store.events.prefix(3)) { event in
-                            NavigationLink(destination: EventDetailsView()) {
+                            NavigationLink(destination: EventDetailsView(event: event)) {
                                 LiveEventCardHome(event: event)
                             }
                             .padding(.bottom, 12)
@@ -102,7 +90,6 @@ struct HomeView: View {
                         .padding(.bottom, 16)
 
                     if store.tasks.isEmpty {
-                 
                         VStack(spacing: 12) {
                             Image(systemName: "checkmark.circle")
                                 .font(.system(size: 36))
@@ -116,7 +103,6 @@ struct HomeView: View {
                         .background(Colors.bgSecondary)
                         .cornerRadius(24)
                     } else {
-                
                         ForEach(store.tasks.prefix(4)) { task in
                             TaskRowItem(
                                 title:    task.text,
@@ -154,7 +140,6 @@ struct WeeklyProgressCard: View {
                 .foregroundColor(Colors.textPrimary)
 
             HStack(spacing: 24) {
-              
                 ZStack {
                     Circle()
                         .stroke(Color(hex: "#2C2C2E"), lineWidth: 8)
@@ -169,7 +154,6 @@ struct WeeklyProgressCard: View {
                 }
                 .frame(width: 80, height: 80)
 
-     
                 HStack(spacing: 24) {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("COMPLETED")
@@ -198,14 +182,11 @@ struct WeeklyProgressCard: View {
     }
 }
 
-
 struct LiveEventCardHome: View {
     let event: EventModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-
-
             Text(event.tag)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(event.accent)
@@ -215,13 +196,11 @@ struct LiveEventCardHome: View {
                 .cornerRadius(12)
                 .padding(.bottom, 16)
 
-  
             Text(event.title)
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(Colors.textPrimary)
                 .padding(.bottom, 8)
 
-         
             HStack(spacing: 8) {
                 Image(systemName: "clock")
                     .font(.system(size: 14))
@@ -232,7 +211,6 @@ struct LiveEventCardHome: View {
             }
             .padding(.bottom, 8)
 
-      
             HStack(spacing: 8) {
                 Image(systemName: "mappin")
                     .font(.system(size: 14))
@@ -247,7 +225,7 @@ struct LiveEventCardHome: View {
                 Image(systemName: "person.2")
                     .font(.system(size: 14))
                     .foregroundColor(Colors.textSecondary)
-                Text("\(event.members) member\(event.members == 1 ? "" : "s")")
+                Text("\(event.members.count) member\(event.members.count == 1 ? "" : "s")")
                     .font(.system(size: 12))
                     .foregroundColor(Colors.textSecondary)
             }
@@ -262,7 +240,6 @@ struct LiveEventCardHome: View {
         )
     }
 }
-
 
 struct TaskRowItem: View {
     let title: String

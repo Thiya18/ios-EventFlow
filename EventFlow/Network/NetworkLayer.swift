@@ -1,12 +1,11 @@
-// NetworkLayer.swift
+
 
 import SwiftUI
 internal import Combine
 
-// ── Base URL ──────────────────────────────────────────────────────────────────
 private let BASE_URL = "http://localhost:8000/api"
 
-// ── Raw API structs ───────────────────────────────────────────────────────────
+
 
 private struct RawEvent: Codable {
     let _id:         String
@@ -28,11 +27,10 @@ private struct RawTask: Codable {
     var done:     Bool
     let text:     String
     let priority: String
-    let dueDate:  String?       // ISO-8601 or null
+    let dueDate:  String?
     let event:    RawEventBrief?
     struct RawEventBrief: Codable {
-        let _id:   String
-        let title: String
+        let _id: String; let title: String
     }
 }
 
@@ -53,8 +51,6 @@ private struct RawUser: Codable {
     let email:     String
     let avatarUrl: String?
 }
-
-// ── HTTP helpers ──────────────────────────────────────────────────────────────
 
 private func apiGet<T: Decodable>(_ path: String) async throws -> T {
     guard let url = URL(string: BASE_URL + path) else { throw URLError(.badURL) }
@@ -82,7 +78,15 @@ private func apiPatch(_ path: String) async throws {
     _ = try? await URLSession.shared.data(for: req)
 }
 
-/// PATCH with a JSON body (used for FCM token save, etc.)
+private func apiPut(_ path: String, body: [String: Any]) async throws {
+    guard let url = URL(string: BASE_URL + path) else { return }
+    var req = URLRequest(url: url)
+    req.httpMethod = "PUT"
+    req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+    _ = try? await URLSession.shared.data(for: req)
+}
+
 private func apiPatchWithBody(_ path: String, body: [String: Any]) async throws {
     guard let url = URL(string: BASE_URL + path) else { return }
     var req = URLRequest(url: url)
@@ -99,15 +103,13 @@ private func apiDelete(_ path: String) async throws {
     _ = try? await URLSession.shared.data(for: req)
 }
 
-// ── Converters ────────────────────────────────────────────────────────────────
 
 private func toEventDate(_ iso: String) -> EventDate {
     let df = DateFormatter()
-    let fmts = ["yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ", "yyyy-MM-dd'T'HH:mm:ss"]
+    let fmts = ["yyyy-MM-dd'T'HH:mm:ss.SSSZ","yyyy-MM-dd'T'HH:mm:ssZ","yyyy-MM-dd'T'HH:mm:ss"]
     var date: Date?
     for fmt in fmts { df.dateFormat = fmt; if let d = df.date(from: iso) { date = d; break } }
-    let cal = Calendar.current
-    let d = date ?? Date()
+    let cal = Calendar.current; let d = date ?? Date()
     return EventDate(day: cal.component(.day, from: d),
                      month: cal.component(.month, from: d),
                      year: cal.component(.year, from: d))
@@ -115,7 +117,7 @@ private func toEventDate(_ iso: String) -> EventDate {
 
 private func toTimeString(_ start: String, _ end: String) -> String {
     let df = DateFormatter(); let out = DateFormatter(); out.dateFormat = "hh:mm a"
-    for fmt in ["yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ"] {
+    for fmt in ["yyyy-MM-dd'T'HH:mm:ss.SSSZ","yyyy-MM-dd'T'HH:mm:ssZ"] {
         df.dateFormat = fmt
         if let s = df.date(from: start), let e = df.date(from: end) {
             return "\(out.string(from: s)) — \(out.string(from: e))"
@@ -136,26 +138,26 @@ private func accentColor(_ hex: String) -> Color {
 }
 
 private func toEventModel(_ raw: RawEvent, index: Int) -> EventModel {
-    EventModel(id: index, tag: raw.tag, title: raw.title,
-               time: toTimeString(raw.startTime, raw.endTime),
-               location: raw.location, members: raw.members?.count ?? 0,
-               accent: accentColor(raw.accentColor),
-               date: toEventDate(raw.startTime))
+    let members = (raw.members ?? []).compactMap { m -> MemberModel? in
+        guard let u = m.user else { return nil }
+        return MemberModel(id: u._id, name: u.name, email: u.email,
+                           avatarUrl: u.avatarUrl ?? "", role: m.role)
+    }
+    return EventModel(id: index, rawId: raw._id, tag: raw.tag, title: raw.title,
+                      time: toTimeString(raw.startTime, raw.endTime),
+                      location: raw.location, accent: accentColor(raw.accentColor),
+                      date: toEventDate(raw.startTime), members: members)
 }
 
 private func toTaskModel(_ raw: RawTask, index: Int) -> TaskModel {
     let priority: TaskPriority = raw.priority == "high" ? .high : raw.priority == "low" ? .low : .med
-
-    // Parse ISO-8601 dueDate string into a Date
     var due: Date? = nil
     if let ds = raw.dueDate {
         let df = DateFormatter()
-        for fmt in ["yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ", "yyyy-MM-dd"] {
-            df.dateFormat = fmt
-            if let d = df.date(from: ds) { due = d; break }
+        for fmt in ["yyyy-MM-dd'T'HH:mm:ss.SSSZ","yyyy-MM-dd'T'HH:mm:ssZ","yyyy-MM-dd"] {
+            df.dateFormat = fmt; if let d = df.date(from: ds) { due = d; break }
         }
     }
-
     return TaskModel(id: index, rawId: raw._id, text: raw.text, done: raw.done,
                      priority: priority, event: raw.event?.title ?? "", dueDate: due)
 }
@@ -174,7 +176,7 @@ private func toAlertModel(_ raw: RawNotification, index: Int) -> AlertModel {
     var timeLabel = "Recently"
     if let str = raw.createdAt {
         let df = DateFormatter(); var date: Date?
-        for fmt in ["yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ"] {
+        for fmt in ["yyyy-MM-dd'T'HH:mm:ss.SSSZ","yyyy-MM-dd'T'HH:mm:ssZ"] {
             df.dateFormat = fmt; if let d = df.date(from: str) { date = d; break }
         }
         if let d = date {
@@ -188,194 +190,185 @@ private func toAlertModel(_ raw: RawNotification, index: Int) -> AlertModel {
                       iconBg: iconBg, systemIcon: raw.iconType, actions: raw.actions)
 }
 
-// ── AppStore ──────────────────────────────────────────────────────────────────
+
 
 @MainActor
 final class AppStore: ObservableObject {
 
-    // ── Auth state ─────────────────────────────────────────────────────────
     @Published var isLoggedIn:    Bool   = false
     @Published var authError:     String = ""
     @Published var isAuthLoading: Bool   = false
 
-    // ── Data ───────────────────────────────────────────────────────────────
-    @Published var events:      [EventModel]  = EventModel.samples
-    @Published var tasks:       [TaskModel]   = TaskModel.samples
-    @Published var alerts:      [AlertModel]  = AlertModel.samples
-    @Published var userName:    String        = "Thiya"
-    @Published var userAvatar:  String        = "https://i.pravatar.cc/150?img=47"
+    @Published var events:      [EventModel]  = []
+    @Published var tasks:       [TaskModel]   = []
+    @Published var alerts:      [AlertModel]  = []
+    @Published var allUsers:    [MemberModel] = []
+    @Published var userName:    String        = ""
+    @Published var userAvatar:  String        = ""
     @Published var userEmail:   String        = ""
     @Published var isConnected: Bool          = false
+    
+    private var rawEventIds: [String] = []
+    private var rawTaskIds:  [String] = []
+    private var rawAlertIds: [String] = []
 
-    // Raw IDs
-    private var rawEventIds:   [String] = []
-    private var rawTaskIds:    [String] = []
-    private var rawAlertIds:   [String] = []
-
-    // ── Logged-in user ID — persisted across app restarts ─────────────────
     var currentUserId: String {
         get { UserDefaults.standard.string(forKey: "ef_user_id") ?? "" }
         set { UserDefaults.standard.set(newValue, forKey: "ef_user_id") }
     }
 
-    // Check on launch if user is already logged in
-    init() {
-        isLoggedIn = !currentUserId.isEmpty
-    }
+    init() { isLoggedIn = !currentUserId.isEmpty }
 
-    // ── SIGN UP ────────────────────────────────────────────────────────────
     func register(name: String, email: String, password: String) async {
-        isAuthLoading = true
-        authError     = ""
+        isAuthLoading = true; authError = ""
         do {
-            let data = try await apiPost("/users/register", body: [
-                "name": name, "email": email, "password": password
-            ])
+            let data = try await apiPost("/users/register", body: ["name": name, "email": email, "password": password])
             let user = try JSONDecoder().decode(RawUser.self, from: data)
-            currentUserId = user._id
-            userName      = user.name
-            userEmail     = user.email
-            userAvatar    = user.avatarUrl ?? "https://i.pravatar.cc/150?img=47"
-            isLoggedIn    = true
-            // Save FCM token now that we have a userId
+            setUser(user); isLoggedIn = true
             await AppStore.pushFCMTokenIfAvailable(userId: user._id)
             await loadAll()
-        } catch {
-            authError = "Registration failed. Email may already be in use."
-        }
+        } catch { authError = "Registration failed. Email may already be in use." }
         isAuthLoading = false
     }
 
-    // ── SIGN IN ────────────────────────────────────────────────────────────
     func login(email: String, password: String) async {
-        isAuthLoading = true
-        authError     = ""
+        isAuthLoading = true; authError = ""
         do {
-            let data = try await apiPost("/users/login", body: [
-                "email": email, "password": password
-            ])
-            // Check for error response
+            let data = try await apiPost("/users/login", body: ["email": email, "password": password])
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let err = json["error"] as? String {
-                authError     = err
-                isAuthLoading = false
-                return
+                authError = err; isAuthLoading = false; return
             }
             let user = try JSONDecoder().decode(RawUser.self, from: data)
-            currentUserId = user._id
-            userName      = user.name
-            userEmail     = user.email
-            userAvatar    = user.avatarUrl ?? "https://i.pravatar.cc/150?img=47"
-            isLoggedIn    = true
-            // Save FCM token now that we have a userId
+            setUser(user); isLoggedIn = true
             await AppStore.pushFCMTokenIfAvailable(userId: user._id)
             await loadAll()
-        } catch {
-            authError = "Login failed. Check your email and password."
-        }
+        } catch { authError = "Login failed. Check your email and password." }
         isAuthLoading = false
     }
 
-    // ── SIGN OUT ───────────────────────────────────────────────────────────
-    func signOut() {
-        currentUserId = ""
-        UserDefaults.standard.removeObject(forKey: "ef_user_id")
-        isLoggedIn    = false
-        events        = EventModel.samples
-        tasks         = TaskModel.samples
-        alerts        = AlertModel.samples
-        userName      = "Thiya"
-        userEmail     = ""
+    private func setUser(_ user: RawUser) {
+        currentUserId = user._id
+        userName      = user.name
+        userEmail     = user.email
+        userAvatar    = user.avatarUrl ?? ""
     }
 
-    // ── Boot ───────────────────────────────────────────────────────────────
+    func signOut() {
+        currentUserId = ""; UserDefaults.standard.removeObject(forKey: "ef_user_id")
+        isLoggedIn = false; isConnected = false
+        events = []; tasks = []; alerts = []; allUsers = []
+        userName = ""; userEmail = ""; userAvatar = ""
+        rawEventIds = []; rawTaskIds = []; rawAlertIds = []
+    }
+
+   
     func load() async {
-        // If user is already logged in (stored ID), restore their name
+     
         if !currentUserId.isEmpty {
             if let raw = try? await apiGet("/users/\(currentUserId)") as RawUser {
                 userName    = raw.name
                 userEmail   = raw.email
-                userAvatar  = raw.avatarUrl ?? "https://i.pravatar.cc/150?img=47"
+                userAvatar  = raw.avatarUrl ?? ""
                 isConnected = true
             }
         }
+       
         await loadAll()
     }
 
     func loadAll() async {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.loadEvents() }
-            group.addTask { await self.loadTasks() }
-            group.addTask { await self.loadAlerts() }
-        }
+        async let e: () = loadEvents()
+        async let t: () = loadTasks()
+        async let a: () = loadAlerts()
+        _ = await (e, t, a)
     }
 
-    // ── Events ─────────────────────────────────────────────────────────────
+  
+
     func loadEvents() async {
         guard let raw = try? await apiGet("/events") as [RawEvent] else { return }
         rawEventIds = raw.map { $0._id }
         events      = raw.enumerated().map { toEventModel($1, index: $0) }
 
-        // Schedule local reminders for every upcoming event.
-        // Uses the raw ISO startTime string parsed into a Date for accuracy.
         let nm = NotificationManager.shared
         let df = DateFormatter()
-        let fmts = ["yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ", "yyyy-MM-dd'T'HH:mm:ss"]
-
+        let fmts = ["yyyy-MM-dd'T'HH:mm:ss.SSSZ","yyyy-MM-dd'T'HH:mm:ssZ","yyyy-MM-dd'T'HH:mm:ss"]
         for rawEvent in raw {
             df.locale = Locale(identifier: "en_US_POSIX")
             var startDate: Date? = nil
-            for fmt in fmts {
-                df.dateFormat = fmt
-                if let d = df.date(from: rawEvent.startTime) { startDate = d; break }
-            }
+            for fmt in fmts { df.dateFormat = fmt; if let d = df.date(from: rawEvent.startTime) { startDate = d; break } }
             guard let start = startDate else { continue }
-
             if start > Date() {
-                // Upcoming — (re)schedule reminders; safe to call again, iOS deduplicates by ID
-                nm.scheduleEventReminder(
-                    eventId:   rawEvent._id,
-                    title:     rawEvent.title,
-                    location:  rawEvent.location,
-                    startDate: start)
+                nm.scheduleEventReminder(eventId: rawEvent._id, title: rawEvent.title,
+                                         location: rawEvent.location, startDate: start)
             } else {
-                // Past event — cancel any stale reminders
                 nm.cancelEventReminder(eventId: rawEvent._id)
             }
         }
     }
 
-    func createEvent(title: String, tag: String, location: String,
-                     startTime: Date, endTime: Date) async {
-        guard !currentUserId.isEmpty else {
-            print("❌ No logged-in user")
-            return
-        }
+    func updateEventLocation(rawId: String, location: String) async {
+        try? await apiPut("/events/\(rawId)", body: ["location": location])
+        await loadEvents()
+    }
+
+    func createEvent(title: String, tag: String, location: String, startTime: Date, endTime: Date) async {
+        guard !currentUserId.isEmpty else { return }
         let fmt = ISO8601DateFormatter()
         _ = try? await apiPost("/events", body: [
-            "title":       title,
-            "tag":         tag,
-            "location":    location,
-            "startTime":   fmt.string(from: startTime),
-            "endTime":     fmt.string(from: endTime),
-            "accentColor": "#00CCBB",
-            "creatorId":   currentUserId,
+            "title": title, "tag": tag, "location": location,
+            "startTime": fmt.string(from: startTime), "endTime": fmt.string(from: endTime),
+            "accentColor": "#00CCBB", "creatorId": currentUserId,
         ])
         await loadEvents()
     }
 
-    // ── Tasks ──────────────────────────────────────────────────────────────
+ 
+    func loginWithFaceID(email: String) async {
+        authError = ""
+
+        guard let raw = try? await apiGet("/users") as [RawUser] else {
+            authError = "Cannot connect to server."
+            return
+        }
+        guard let user = raw.first(where: { $0.email.lowercased() == email.lowercased() }) else {
+            authError = "No account found with this email."
+            return
+        }
+        currentUserId = user._id
+        userName      = user.name
+        userEmail     = user.email
+        userAvatar    = user.avatarUrl ?? ""
+        isConnected   = true
+        await loadAll()
+    }
+
+    func loadAllUsers() async {
+        guard let raw = try? await apiGet("/users") as [RawUser] else { return }
+        allUsers = raw.map { MemberModel(id: $0._id, name: $0.name, email: $0.email,
+                                         avatarUrl: $0.avatarUrl ?? "", role: "member") }
+    }
+
+    func addMember(eventRawId: String, userId: String) async {
+        _ = try? await apiPost("/events/\(eventRawId)/members", body: ["userId": userId])
+        await loadEvents()
+    }
+
+    func removeMember(eventRawId: String, userId: String) async {
+        try? await apiDelete("/events/\(eventRawId)/members/\(userId)")
+        await loadEvents()
+    }
+
+
     func loadTasks() async {
         guard let raw = try? await apiGet("/tasks") as [RawTask] else { return }
         rawTaskIds = raw.map { $0._id }
         tasks      = raw.enumerated().map { toTaskModel($1, index: $0) }
-
-        // Refresh all local reminders to match current server state
         let nm = NotificationManager.shared
         for task in tasks {
-            if task.done {
-                nm.cancelTaskReminder(taskId: task.rawId)
-            } else if let due = task.dueDate, !task.rawId.isEmpty {
+            if task.done { nm.cancelTaskReminder(taskId: task.rawId) }
+            else if let due = task.dueDate, !task.rawId.isEmpty {
                 nm.scheduleTaskReminder(taskId: task.rawId, text: task.text, dueDate: due)
             }
         }
@@ -384,28 +377,21 @@ final class AppStore: ObservableObject {
     func toggleTask(id: Int) async {
         guard id < rawTaskIds.count else { return }
         if let i = tasks.firstIndex(where: { $0.id == id }) { tasks[i].done.toggle() }
-        let rawId = rawTaskIds[id]
-        try? await apiPatch("/tasks/\(rawId)/toggle")
-        await loadTasks()   // loadTasks will re-sync reminders
+        try? await apiPatch("/tasks/\(rawTaskIds[id])/toggle")
+        await loadTasks()
     }
 
     func createTask(text: String, priority: String = "med", dueDate: Date? = nil) async {
         guard !rawEventIds.isEmpty else { return }
         let fmt = ISO8601DateFormatter()
-        var body: [String: Any] = [
-            "text":      text,
-            "eventId":   rawEventIds[0],
-            "priority":  priority,
-            "creatorId": currentUserId,
-        ]
-        if let due = dueDate {
-            body["dueDate"] = fmt.string(from: due)
-        }
+        var body: [String: Any] = ["text": text, "eventId": rawEventIds[0],
+                                    "priority": priority, "creatorId": currentUserId]
+        if let due = dueDate { body["dueDate"] = fmt.string(from: due) }
         _ = try? await apiPost("/tasks", body: body)
-        await loadTasks()   // will schedule local reminder if dueDate set
+        await loadTasks()
     }
 
-    // ── Notifications ──────────────────────────────────────────────────────
+
     func loadAlerts() async {
         guard let raw = try? await apiGet("/notifications") as [RawNotification] else { return }
         rawAlertIds = raw.map { $0._id }
@@ -429,24 +415,20 @@ final class AppStore: ObservableObject {
         try? await apiDelete("/notifications/\(rawAlertIds[id])")
     }
 
-    // ── Computed ───────────────────────────────────────────────────────────
+ 
+
     var unreadCount:  Int    { alerts.filter { !$0.read }.count }
     var pendingTasks: Int    { tasks.filter  { !$0.done }.count }
     var doneTasks:    Int    { tasks.filter  {  $0.done }.count }
     var taskProgress: Double { tasks.isEmpty ? 0 : Double(doneTasks) / Double(tasks.count) }
 
-    // ── FCM Token Helpers ──────────────────────────────────────────────────
 
-    /// Called by AppDelegate when APNs returns a device token.
     nonisolated static func saveFCMTokenToBackend(userId: String, token: String) async {
         try? await apiPatchWithBody("/users/\(userId)/fcm-token", body: ["fcmToken": token])
-        print("[FCM] Token sent to backend for user \(userId)")
     }
 
-    /// Called right after login/register — pushes any stored APNs token immediately.
     nonisolated static func pushFCMTokenIfAvailable(userId: String) async {
-        guard let token = UserDefaults.standard.string(forKey: "ef_apns_token"),
-              !token.isEmpty else { return }
+        guard let token = UserDefaults.standard.string(forKey: "ef_apns_token"), !token.isEmpty else { return }
         await saveFCMTokenToBackend(userId: userId, token: token)
     }
 }

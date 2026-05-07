@@ -1,10 +1,3 @@
-//
-//  NotificationManager.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-30.
-//
-
 // NotificationManager.swift
 // EventFlow — Local Push Notification Manager (Full Implementation)
 
@@ -14,7 +7,6 @@ import SwiftUI
 import CoreLocation
 internal import Combine
 
-// MARK: - NotificationManager
 
 final class NotificationManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
 
@@ -29,7 +21,6 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         refreshPendingCount()
     }
 
-    // MARK: - Permission
 
     func requestPermission() {
         UNUserNotificationCenter.current().requestAuthorization(
@@ -52,8 +43,6 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
             DispatchQueue.main.async { self.pendingCount = requests.count }
         }
     }
-
-    // MARK: - Task Reminders
 
     func scheduleTaskReminder(taskId: String, text: String, dueDate: Date) {
         let center = UNUserNotificationCenter.current()
@@ -93,8 +82,6 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
         refreshPendingCount()
     }
-
-    // MARK: - Event Reminders
 
     func scheduleEventReminder(eventId: String, title: String, location: String, startDate: Date) {
         let center = UNUserNotificationCenter.current()
@@ -137,8 +124,6 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         refreshPendingCount()
     }
 
-    // MARK: - Immediate / Test Notification
-
     func scheduleImmediate(
         title: String,
         body: String,
@@ -161,8 +146,6 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
             else { self?.refreshPendingCount() }
         }
     }
-
-    // MARK: - Location-Based Notification
 
     func scheduleLocationNotification(
         identifier: String,
@@ -197,13 +180,10 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         }
     }
 
-    // MARK: - Badge Reset
 
     func clearBadge() {
         UNUserNotificationCenter.current().setBadgeCount(0) { _ in }
     }
-
-    // MARK: - UNUserNotificationCenterDelegate
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
@@ -230,14 +210,12 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
     }
 }
 
-// MARK: - Notification Names
 
 extension Notification.Name {
     static let taskNotificationTapped  = Notification.Name("taskNotificationTapped")
     static let eventNotificationTapped = Notification.Name("eventNotificationTapped")
 }
 
-// MARK: - NotificationTestPanel (Debug UI)
 
 struct NotificationTestPanel: View {
     @ObservedObject private var nm = NotificationManager.shared

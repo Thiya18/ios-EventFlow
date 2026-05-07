@@ -1,10 +1,3 @@
-//
-//  MapView.swift
-//  EventFlow
-//
-//  Created by Thiya on 2026-04-27.
-//
-
 // MapView.swift
 // EventFlow — Map with Real User Location + Location Reminder sheet
 
@@ -12,8 +5,6 @@ import SwiftUI
 import MapKit
 import CoreLocation
 internal import Combine
-
-// MARK: - LocationManager
 
 final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     var objectWillChange = ObservableObjectPublisher()
@@ -79,15 +70,22 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     }
 }
 
-// MARK: - MapView
+actor GeocodeCache {
+    static let shared = GeocodeCache()
+    private var cache: [String: CLLocationCoordinate2D] = [:]
+
+    func get(_ key: String) -> CLLocationCoordinate2D? { cache[key] }
+    func set(_ key: String, _ coord: CLLocationCoordinate2D) { cache[key] = coord }
+}
 
 struct MapView: View {
     @EnvironmentObject private var store: AppStore
     @StateObject private var locationManager = LocationManager.shared
-    @State private var searchText    = ""
+    @State private var searchText     = ""
     @State private var activeEventId: Int? = nil
 
-    // ── Location reminder sheet ──
+    @State private var geocodedCoords: [String: CLLocationCoordinate2D] = [:]
+
     @State private var reminderEvent: EventModel? = nil
     @State private var showReminderSheet = false
 
@@ -97,16 +95,13 @@ struct MapView: View {
     )
 
     var filteredAnnotations: [EventAnnotation] {
-        let offsets: [(Double, Double)] = [
-            (6.9271, 79.8612), (7.2906, 80.6337), (6.0535, 80.2210),
-            (7.4818, 80.3609), (8.3114, 80.4037), (7.9403, 81.0188), (6.8270, 81.0393),
-        ]
-        let base = store.events.enumerated().compactMap { index, event -> EventAnnotation? in
-            let pos = offsets[index % offsets.count]
+        let base = store.events.compactMap { event -> EventAnnotation? in
+            guard let coord = geocodedCoords[event.rawId] else { return nil }
             return EventAnnotation(
-                id: event.id, title: event.title, tag: event.tag,
-                time: event.time, location: event.location, color: event.accent,
-                coordinate: CLLocationCoordinate2D(latitude: pos.0, longitude: pos.1)
+                id: event.id, rawId: event.rawId,
+                title: event.title, tag: event.tag,
+                time: event.time, location: event.location,
+                color: event.accent, coordinate: coord
             )
         }
         guard !searchText.isEmpty else { return base }
@@ -120,7 +115,6 @@ struct MapView: View {
     var body: some View {
         ZStack(alignment: .top) {
 
-            // ── Map ───────────────────────────────────────────────────────
             Map(coordinateRegion: $region,
                 showsUserLocation: true,
                 annotationItems: filteredAnnotations) { annotation in
@@ -131,6 +125,14 @@ struct MapView: View {
                         onTap: {
                             withAnimation(.spring()) {
                                 activeEventId = activeEventId == annotation.id ? nil : annotation.id
+                                if activeEventId == annotation.id {
+                                    withAnimation {
+                                        region = MKCoordinateRegion(
+                                            center: annotation.coordinate,
+                                            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                        )
+                                    }
+                                }
                             }
                         }
                     )
@@ -138,7 +140,6 @@ struct MapView: View {
             }
             .ignoresSafeArea()
 
-            // ── Search bar ────────────────────────────────────────────────
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass").foregroundColor(Colors.textSecondary)
@@ -178,10 +179,21 @@ struct MapView: View {
                     .background(Color(hex: "#1C1C1E").opacity(0.95)).cornerRadius(12)
                     .padding(.horizontal, 16).padding(.top, 8)
                 }
+
+                if !store.events.isEmpty && filteredAnnotations.isEmpty && searchText.isEmpty {
+                    HStack(spacing: 8) {
+                        ProgressView().tint(Colors.accentTeal).scaleEffect(0.7)
+                        Text("Locating events on map...")
+                            .font(.system(size: 12)).foregroundColor(Colors.textSecondary)
+                    }
+                    .padding(10)
+                    .background(Color(hex: "#1C1C1E").opacity(0.95)).cornerRadius(12)
+                    .padding(.horizontal, 16).padding(.top, 8)
+                }
+
                 Spacer()
             }
 
-            // ── FABs + event count ────────────────────────────────────────
             VStack {
                 Spacer()
                 HStack(alignment: .bottom) {
@@ -206,10 +218,6 @@ struct MapView: View {
                                     )
                                 } else {
                                     locationManager.requestPermission()
-                                    region = MKCoordinateRegion(
-                                        center: CLLocationCoordinate2D(latitude: 7.8731, longitude: 80.7718),
-                                        span: MKCoordinateSpan(latitudeDelta: 2.5, longitudeDelta: 2.5)
-                                    )
                                 }
                             }
                         } label: {
@@ -220,14 +228,9 @@ struct MapView: View {
                         }
 
                         Button {
-                            withAnimation {
-                                region = MKCoordinateRegion(
-                                    center: CLLocationCoordinate2D(latitude: 7.8731, longitude: 80.7718),
-                                    span: MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 4.0)
-                                )
-                            }
+                            fitAllAnnotations()
                         } label: {
-                            Image(systemName: "mappin")
+                            Image(systemName: "mappin.and.ellipse")
                                 .font(.system(size: 20)).foregroundColor(.white)
                                 .frame(width: 52, height: 52)
                                 .background(Color(hex: "#1C1C1E").opacity(0.92)).clipShape(Circle())
@@ -239,7 +242,6 @@ struct MapView: View {
                 .padding(.bottom, 100)
             }
 
-            // ── Selected event detail card ─────────────────────────────────
             if let id = activeEventId,
                let event = store.events.first(where: { $0.id == id }) {
                 VStack {
@@ -248,8 +250,8 @@ struct MapView: View {
                         event: event,
                         onClose: { withAnimation { activeEventId = nil } },
                         onAddLocationReminder: {
-                            reminderEvent       = event
-                            showReminderSheet   = true
+                            reminderEvent     = event
+                            showReminderSheet = true
                         }
                     )
                     .padding(.horizontal, 16)
@@ -258,19 +260,75 @@ struct MapView: View {
                 }
             }
         }
-        .onAppear { locationManager.requestPermission() }
+        .onAppear {
+            locationManager.requestPermission()
+            geocodeAllEvents()
+        }
+        .onChange(of: store.events) { _ in
+            geocodeAllEvents()
+        }
         .onDisappear { locationManager.stopUpdating() }
-        // ── Location Reminder sheet ────────────────────────────────────────
         .sheet(isPresented: $showReminderSheet) {
             AddLocationReminderView(event: reminderEvent)
         }
     }
-}
 
-// MARK: - Map Annotation Model
+    private func geocodeAllEvents() {
+        for event in store.events {
+            let key = event.rawId
+            if geocodedCoords[key] != nil { continue }
+
+            let locationStr = event.location.trimmingCharacters(in: .whitespaces)
+
+            guard !locationStr.isEmpty else { continue }
+
+            Task {
+                if let cached = await GeocodeCache.shared.get(key) {
+                    await MainActor.run { geocodedCoords[key] = cached }
+                    return
+                }
+
+                let request = MKLocalSearch.Request()
+                request.naturalLanguageQuery = locationStr
+                do {
+                    let response = try await MKLocalSearch(request: request).start()
+                    if let coord = response.mapItems.first?.placemark.coordinate {
+                        await GeocodeCache.shared.set(key, coord)
+                        await MainActor.run {
+                            geocodedCoords[key] = coord
+                        }
+                    }
+                } catch {
+                }
+            }
+        }
+    }
+
+    private func fitAllAnnotations() {
+        guard !filteredAnnotations.isEmpty else {
+            region = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: 7.8731, longitude: 80.7718),
+                span:   MKCoordinateSpan(latitudeDelta: 4.0, longitudeDelta: 4.0)
+            )
+            return
+        }
+        let lats  = filteredAnnotations.map { $0.coordinate.latitude }
+        let lngs  = filteredAnnotations.map { $0.coordinate.longitude }
+        let minLat = lats.min()!, maxLat = lats.max()!
+        let minLng = lngs.min()!, maxLng = lngs.max()!
+        let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2,
+                                            longitude: (minLng + maxLng) / 2)
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(0.05, (maxLat - minLat) * 1.4),
+            longitudeDelta: max(0.05, (maxLng - minLng) * 1.4)
+        )
+        withAnimation { region = MKCoordinateRegion(center: center, span: span) }
+    }
+}
 
 struct EventAnnotation: Identifiable {
     let id:         Int
+    let rawId:      String
     let title:      String
     let tag:        String
     let time:       String
@@ -278,8 +336,6 @@ struct EventAnnotation: Identifiable {
     let color:      Color
     let coordinate: CLLocationCoordinate2D
 }
-
-// MARK: - Event Pin View
 
 struct EventPinView: View {
     let annotation: EventAnnotation
@@ -316,26 +372,14 @@ struct EventPinView: View {
     }
 }
 
-// MARK: - Event Detail Card
-
 struct EventDetailCard: View {
     let event:                 EventModel
     let onClose:               () -> Void
     var onAddLocationReminder: (() -> Void)? = nil
 
-    // Demo coordinates per event
-    private var eventCoords: (Double, Double) {
-        let coords: [(Double, Double)] = [
-            (6.9271, 79.8612), (7.2906, 80.6337), (6.0535, 80.2210),
-            (7.4818, 80.3609), (8.3114, 80.4037), (7.9403, 81.0188), (6.8270, 81.0393),
-        ]
-        return coords[event.id % coords.count]
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // Header row
             HStack {
                 Text(event.tag)
                     .font(.system(size: 10, weight: .bold)).kerning(1)
@@ -369,30 +413,24 @@ struct EventDetailCard: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "person.2").font(.system(size: 13)).foregroundColor(Colors.textSecondary)
-                Text("\(event.members) member\(event.members == 1 ? "" : "s")")
+                Text("\(event.members.count) member\(event.members.count == 1 ? "" : "s")")
                     .font(.system(size: 13)).foregroundColor(Colors.textSecondary)
             }.padding(.bottom, 14)
 
-            // ── Add Location Reminder button ──────────────────────────────
             if let addReminder = onAddLocationReminder {
                 Button(action: addReminder) {
                     HStack(spacing: 8) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 14))
-                        Text("Add Location Reminder")
-                            .font(.system(size: 13, weight: .semibold))
+                        Image(systemName: "location.fill").font(.system(size: 14))
+                        Text("Add Location Reminder").font(.system(size: 13, weight: .semibold))
                     }
                     .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Colors.accentTeal)
-                    .cornerRadius(12)
+                    .frame(maxWidth: .infinity).padding(.vertical, 12)
+                    .background(Colors.accentTeal).cornerRadius(12)
                 }
                 .padding(.bottom, 14)
             }
 
-            Rectangle()
-                .fill(event.accent).frame(height: 3).cornerRadius(4)
+            Rectangle().fill(event.accent).frame(height: 3).cornerRadius(4)
         }
         .padding(20)
         .background(Color(hex: "#1C1C1E").opacity(0.97))
