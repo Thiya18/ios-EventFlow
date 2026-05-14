@@ -18,6 +18,8 @@ struct EventDetailsView: View {
     @State private var showAddTask    = false
     @State private var showAddMembers = false
     @State private var showLocationEdit = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -39,7 +41,7 @@ struct EventDetailsView: View {
                         Button { } label: {
                             Image(systemName: "square.and.arrow.up").foregroundColor(.white)
                         }
-                        Button { } label: {
+                        Button { showDeleteConfirm = true } label: {
                             Image(systemName: "trash").foregroundColor(Color(hex: "#FF5C5C"))
                         }
                     }
@@ -236,6 +238,35 @@ struct EventDetailsView: View {
             LocationEditSheet(eventRawId: liveEvent.rawId)
         }
         .task { await store.loadTasks() }
+        .confirmationDialog(
+            "Delete \"\(liveEvent.title)\"?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Event", role: .destructive) {
+                isDeleting = true
+                Task {
+                    await store.deleteEvent(rawId: liveEvent.rawId)
+                    isDeleting = false
+                    dismiss()
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("This event and all its tasks will be permanently deleted.")
+        }
+        .overlay {
+            if isDeleting {
+                ZStack {
+                    Color.black.opacity(0.5).ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        ProgressView().progressViewStyle(CircularProgressViewStyle(tint: Colors.accentTeal)).scaleEffect(1.4)
+                        Text("Deleting...").font(.system(size: 14)).foregroundColor(.white)
+                    }
+                    .padding(32).background(Colors.bgSecondary).cornerRadius(20)
+                }
+            }
+        }
     }
 }
 

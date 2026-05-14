@@ -1,5 +1,3 @@
-
-
 import SwiftUI
 internal import Combine
 
@@ -288,17 +286,25 @@ final class AppStore: ObservableObject {
 
     func loadEvents() async {
         guard let raw = try? await apiGet("/events") as [RawEvent] else { return }
-        rawEventIds = raw.map { $0._id }
-        events      = raw.enumerated().map { toEventModel($1, index: $0) }
+
+        // Single DateFormatter reused for both sorting and notification scheduling
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "en_US_POSIX")
+        let fmts = ["yyyy-MM-dd'T'HH:mm:ss.SSSZ", "yyyy-MM-dd'T'HH:mm:ssZ", "yyyy-MM-dd'T'HH:mm:ss"]
+        func parseDate(_ str: String) -> Date {
+            for fmt in fmts { df.dateFormat = fmt; if let d = df.date(from: str) { return d } }
+            return .distantPast
+        }
+
+        // Sort: newest startTime first
+        let sorted = raw.sorted { parseDate($0.startTime) > parseDate($1.startTime) }
+        rawEventIds = sorted.map { $0._id }
+        events      = sorted.enumerated().map { toEventModel($1, index: $0) }
 
         let nm = NotificationManager.shared
-        let df = DateFormatter()
-        let fmts = ["yyyy-MM-dd'T'HH:mm:ss.SSSZ","yyyy-MM-dd'T'HH:mm:ssZ","yyyy-MM-dd'T'HH:mm:ss"]
         for rawEvent in raw {
-            df.locale = Locale(identifier: "en_US_POSIX")
-            var startDate: Date? = nil
-            for fmt in fmts { df.dateFormat = fmt; if let d = df.date(from: rawEvent.startTime) { startDate = d; break } }
-            guard let start = startDate else { continue }
+            let start = parseDate(rawEvent.startTime)
+            guard start != .distantPast else { continue }
             if start > Date() {
                 nm.scheduleEventReminder(eventId: rawEvent._id, title: rawEvent.title,
                                          location: rawEvent.location, startDate: start)
@@ -306,6 +312,12 @@ final class AppStore: ObservableObject {
                 nm.cancelEventReminder(eventId: rawEvent._id)
             }
         }
+    }
+
+    func deleteEvent(rawId: String) async {
+        try? await apiDelete("/events/\(rawId)")
+        await loadEvents()
+        await loadTasks()   // tasks also deleted on backend
     }
 
     func updateEventLocation(rawId: String, location: String) async {
