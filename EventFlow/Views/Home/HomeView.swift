@@ -52,10 +52,20 @@ struct HomeView: View {
                     )
                     .padding(.bottom, 24)
 
-                    Text("Upcoming Events")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Colors.textPrimary)
-                        .padding(.bottom, 16)
+                    HStack {
+                        Text("Recent Events")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(Colors.textPrimary)
+                        Spacer()
+                        if store.events.count > 3 {
+                            NavigationLink(destination: AllEventsView()) {
+                                Text("See All")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(Colors.accentTeal)
+                            }
+                        }
+                    }
+                    .padding(.bottom, 16)
 
                     if store.events.isEmpty {
                         VStack(spacing: 12) {
@@ -75,6 +85,7 @@ struct HomeView: View {
                         .cornerRadius(24)
                         .padding(.bottom, 24)
                     } else {
+                        // Shows newest 3 events (sorted newest-first via AppStore.loadEvents)
                         ForEach(store.events.prefix(3)) { event in
                             NavigationLink(destination: EventDetailsView(event: event)) {
                                 LiveEventCardHome(event: event)
